@@ -19,6 +19,7 @@ elpa/
 
 # Emacs cache
 cache/
+.cache/
 bookmarks
 
 # Private stuff
@@ -27,9 +28,8 @@ var/
 # Emacs server dir
 server/
 
-# Autocomplete history and other dbs
-ac-comphist.dat
-semanticdb/
+# Autosave list
+auto-save-list
 
 # Always keep .gitignore
 !.gitignore
@@ -38,8 +38,21 @@ semanticdb/
 .org-id-locations
 *_archive
 
+# Workspace
+workspace/
+
+# transiet files
+transient/
+
 # Emacs-W3
 url/
 
 # Flycheck
 flycheck_*
+
+# Language server
+eclipse.jdt.ls/
+.lsp-session*
+
+# Projectile
+*.eld
