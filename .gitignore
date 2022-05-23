@@ -22,9 +22,6 @@ cache/
 .cache/
 bookmarks
 
-# Private stuff
-var/
-
 # Emacs server dir
 server/
 
@@ -44,8 +41,11 @@ workspace/
 # transiet files
 transient/
 
-# Emacs-W3
-url/
+# Eshell
+eshell/
+
+# Snippets
+snippets/
 
 # Flycheck
 flycheck_*

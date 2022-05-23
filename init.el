@@ -6,6 +6,7 @@
 (tooltip-mode -1)               ; Disable tooltips
 (menu-bar-mode -1)              ; Disable menu bar
 (setq split-width-threshold 1)  ; default vertical split
+(setq make-backup-files nil)    ; Don't do backups!
 
 ; A vim like scrolling expierence
 (setq scroll-margin 14)
@@ -20,6 +21,8 @@
 
 ; Install the icons
 (use-package all-the-icons)
+(use-package all-the-icons-ivy-rich
+  :init (all-the-icons-ivy-rich-mode 1))
 
 ; use doom mode line
 (use-package doom-modeline
@@ -33,6 +36,7 @@
 ;; Disable line numbers for some modes
 (dolist (mode '(org-mode-hook
                 term-mode-hook
+                treemacs-mode-hook
                 shell-mode-hook
                 eshell-mode-hook
                 helpful-mode-hook))
@@ -52,6 +56,18 @@
   ([remap describe-command] . helpful-command)
   ([remap describe-variable] . counsel-describe-variable)
   ([remap describe-key] . helpful-key))
+
+(use-package treemacs
+  :config
+  (setq treemacs-width 30))
+
+(use-package clipetty
+ :ensure t
+ :hook (after-init . global-clipetty-mode))
+
+(set-language-environment "UTF-8") 
+(set-default-coding-systems 'utf-8) 
+(set-buffer-file-coding-system 'utf-8-unix)
 
 ; Install key-chords for some advanced configuration
 (use-package key-chord)
@@ -98,6 +114,8 @@
 (use-package undo-tree
   :ensure t
   :after evil
+  :init
+  (setq undo-tree-auto-save-history nil)
   :diminish
   :config
   (evil-set-undo-system 'undo-tree)
@@ -108,9 +126,22 @@
   (general-evil-setup t))
 
 ;; searching utilities
-(nvmap :states '(normal) :keymaps 'override :prefix "SPC"
+(nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
+       "." '(counsel-find-file : which-key "Find-File"))
+;; searching utilities
+(nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
        "s f" '(counsel-projectile-find-file :which-key "Search file")
-       "s t" '(counsel-projectile-ripgrep :which-key "Search text"))
+       "s t" '(counsel-projectile-rg :which-key "Search text")
+       "s p" '(counsel-projectile-switch-project : which-key "Search Projects"))
+
+;; neotree
+(nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
+       "t" '(treemacs :which-key "TreeMacs"))
+
+;; Code evaluation
+(nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
+       "e x" '(eval-last-sexp :which-key "Eval-Last-Sexp")
+       "e r" '(eval-region :which-key "Eval-Region"))
 
 ;; Initialize package sources
 (require 'package)
@@ -129,34 +160,51 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 (use-package ivy
-  :diminish
-  :bind (("C-s" . swiper)
-         :map ivy-minibuffer-map
-         ;; ("TAB" . ivy-alt-done)	
-         ;; ("C-l" . ivy-alt-done)
-         ("C-j" . ivy-next-line)
-         ("C-k" . ivy-previous-line)
-         :map ivy-switch-buffer-map
-         ("C-k" . ivy-previous-line)
-         ("C-l" . ivy-done)
-         ("C-d" . ivy-switch-buffer-kill)
-         :map ivy-reverse-i-search-map
-         ("C-k" . ivy-previous-line)
-         ("C-d" . ivy-reverse-i-search-kill))
-  :config
-  (ivy-mode 1))
+:diminish
+:bind (("C-s" . swiper)
+        :map ivy-minibuffer-map
+        ("TAB" . ivy-alt-done)	
+        ;; ("C-l" . ivy-alt-done)
+        ("C-j" . ivy-next-line)
+        ("C-k" . ivy-previous-line)
+        :map ivy-switch-buffer-map
+        ("C-k" . ivy-previous-line)
+        ("C-l" . ivy-done)
+        ("C-d" . ivy-switch-buffer-kill)
+        :map ivy-reverse-i-search-map
+        ("C-k" . ivy-previous-line)
+        ("C-d" . ivy-reverse-i-search-kill))
+:config
+(ivy-mode 1))
 
 (use-package ivy-rich
-  :init
-  (ivy-rich-mode 1))
+:after ivy
+:init
+(ivy-rich-mode 1))
+
+; A floating window like expierence
+(use-package ivy-posframe
+  :config
+  (setq ivy-posframe-display-functions-alist
+    `((counsel-M-x                         . ivy-posframe-display-at-frame-center)
+      (counsel-projectile-rg               . ivy-posframe-display-at-frame-center)
+      (counsel-projectile-switch project   . ivy-posframe-display-at-frame-center)
+      (t                       . ivy-posframe-display))
+      ivy-posframe-height-alist '((t . 10))
+      ivy-posframe-parameters '((:internal-border-width 2)
+                                (:internal-border-color . "white")))
+      (ivy-posframe-mode 1))
+
+; Make posframe respect original theme
+(put 'ivy-posframe 'face-alias 'default)
 
 ; A package to utilize the full potential of ivy
 (use-package counsel
-  :bind (("M-x" . counsel-M-x)
-         ("C-x b" . counsel-ibuffer)
-         ("C-x C-f" . counsel-find-file)
-         :map minibuffer-local-map
-         ("C-r" . 'counsel-minibuffer-history)))
+:bind (("M-x" . counsel-M-x)
+        ("C-x b" . counsel-ibuffer)
+        ("C-x C-f" . counsel-find-file)
+        :map minibuffer-local-map
+        ("C-r" . 'counsel-minibuffer-history)))
 
 ; Magit Installation
 (use-package magit
@@ -231,13 +279,18 @@
 (add-hook 'after-save-hook #'howard/org-babel-tangle-config)
 
 (use-package lsp-mode
-  :commands (lsp lsp-deffered)
+  :hook ((java-mode) . lsp-deferred)
+  :commands (lsp lsp-deferred)
   :init
-  (setq lsp-keymap-prefix "<Space> l")
+  (setq lsp-keymap-prefix "C-c l")
   :config
   (lsp-enable-which-key-integration t))
 
 (use-package lsp-ui)
+
+(use-package yasnippet-snippets)
+(use-package yasnippet
+  :config (yas-global-mode 1))
 
 ;; Add language servers here
 (use-package lsp-java
@@ -246,14 +299,7 @@
 
 ;; completion framework
 (use-package company
+  :hook ((java-mode emacs-lisp-mode) . company-mode)
   :config
-    (global-company-mode t)
-    (setq company-delay 0)
-    (setq company-minimum-prefix-length 3)
-    (setq company-backends
-      `((company-files company-yasnippet company-capf company-keywords)
-        (company-abbrev company-dabbrev)))
-)
-(add-hook 'emacs-lisp-mode-hook (lambda () 
-          (add-to-list (make-local-variable 'company-backends) 
-          '(company-elisp))))
+    (setq company-delay 0.1)
+    (setq company-minimum-prefix-length 1))
