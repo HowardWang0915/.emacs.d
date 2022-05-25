@@ -42,9 +42,9 @@
 (use-package treemacs-all-the-icons
   :after treemacs)
 (use-package doom-themes
-  :init (load-theme 'doom-dark+ t)
+  :init (load-theme 'doom-tokyo-night t)
   :config
-    (setq doom-themes-treemacs-theme "all-the-icons")
+    (setq doom-themes-treemacs-theme "doom-colors")
     (doom-themes-treemacs-config)
     (doom-themes-org-config))
 
@@ -77,17 +77,6 @@
                               (bookmarks . "book"))))
 
 (column-number-mode)             ; toggle column number(not line number) display in the mode line
-; (global-display-line-numbers-mode t) ; turn on line numbers
-
-;; Disable line numbers for some modes
-;; (dolist (mode '(org-mode-hook
-;;                 term-mode-hook
-;;                 treemacs-mode-hook
-;;                 shell-mode-hook
-;;                 eshell-mode-hook
-;;                 vterm-mode-hook
-;;                 helpful-mode-hook))
-;;   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 (add-hook 'prog-mode-hook (lambda () (display-line-numbers-mode t)))
 
 ; Add delimiters for easier reading. Prog mode is all programming mode
@@ -231,7 +220,7 @@
 ;; Configuration related
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
        "c" '(:ignore c :which-key "Config")
-       "c r" '((lambda () (interactive) (load-file "~/.emacs.d/init.el")) :which-key "Reload emacs config")
+       "c r" '((lambda () (interactive) (load-file "~/.emacs.d/init.el")) :which-key "Reload Emacs config")
        "c e" '((lambda () (interactive) (find-file "~/.emacs.d/Emacs.org")) :which-key "Edit config file"))
 
 ;; Help system
@@ -245,6 +234,7 @@
        "o" '(:ignore o :which-key "Org-Mode")
        "o a" '(org-agenda :which-key "Org Agenda")
        "o c" '(org-roam-capture :which-key "Org Roam Capture")
+       "o j" '(org-roam-dailies-goto-today :which-key "Show today's journal")
        "o d" '(org-roam-dailies-capture-today :which-key "Org Roam Dailies"))
 
 ;; LSP related
@@ -366,6 +356,8 @@
 (use-package counsel-projectile
   :config (counsel-projectile-mode))
 
+(use-package writeroom-mode)
+
 ;; Org-mode
 (defun howard/org-mode-setup ()
   (org-indent-mode)
@@ -380,14 +372,14 @@
 
   ;; Set faces for heading levels
   (dolist (face '((org-level-1 . 1.35)
-                  (org-level-2 . 1.25)
-                  (org-level-3 . 1.2)
-                  (org-level-4 . 1.1)
+                  (org-level-2 . 1.15)
+                  (org-level-3 . 1.1)
+                  (org-level-4 . 1.05)
                   (org-level-5 . 1.0)
                   (org-level-6 . 1.0)
                   (org-level-7 . 1.0)
                   (org-level-8 . 1.0)))
-    (set-face-attribute (car face) nil :font "Source Serif Pro" :weight 'semi-bold :height (cdr face)))
+    (set-face-attribute (car face) nil :font "Dejavu Sans Mono" :weight 'semi-bold :height (cdr face)))
 
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
   (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
@@ -397,7 +389,10 @@
   (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
-  (set-face-attribute 'org-document-title nil :inherit 'variable-pitch))
+  (set-face-attribute 'org-document-title nil :inherit 'variable-pitch :weight 'semi-bold :height 1.2)
+  (set-face-attribute 'org-document-info-keyword nil :inherit 'variable-pitch)
+  (set-face-attribute 'org-tag nil :inherit '(shadow fixed-pitch))
+  (set-face-attribute 'org-block-begin-line nil :inherit '(shadow fixed-pitch)))
 (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
 
 ;; Org Mode Config
@@ -448,11 +443,11 @@
     ("t" "Task" entry "* %^{Select your option|TODO|LATER|} %?\n SCHEDULE %^T" 
        :target (file+head+olp "Tasks.org"
                           "#+title: Tasks and Ideas"
-                          ("Inbox")))
+                          ("Tasks")))
     ("i" "Idea" entry "* IDEA %?" 
        :target (file+head+olp "Tasks.org"
                           "#+title: Tasks and Ideas"
-                          ("Tasks")))
+                          ("Ideas")))
     ("j" "journal" entry
        "* %<%I:%M %p> - Journal  :journal:\n\n%?\n\n"
        :target (file+head "%<%Y-%m-%d>.org"
@@ -477,10 +472,14 @@
 
 (defun howard/org-babel-tangle-config()
   (when (string-equal (buffer-file-name)
-                      (expand-file-name "~/.emacs.d/Emacs.org"))
+		      (expand-file-name "~/.emacs.d/Emacs.org"))
     (let ((org-confirm-babel-evaluate nil))
       (org-babel-tangle))))
 (add-hook 'after-save-hook #'howard/org-babel-tangle-config)
+;; (org-babel-load-file
+;;   (expand-file-name
+;;    "Emacs.org"
+;;    user-emacs-directory))
 
 (use-package lsp-mode
   :hook ((java-mode) . lsp-deferred)
@@ -519,6 +518,11 @@
 ;; better looking company
 (use-package company-box
   :hook (company-mode . company-box-mode))
+
+(use-package tree-sitter)
+(use-package tree-sitter-langs)
+(global-tree-sitter-mode)
+(add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
 
 (use-package vterm)
 (setq shell-file-name "/bin/zsh"

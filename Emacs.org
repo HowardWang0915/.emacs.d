@@ -1,4 +1,4 @@
-#+title Emacs Configuration
+#+title: Emacs Configuration
 #+PROPERTY: header-args:emacs-lisp :tangle ./init.el
 
 * Basic UI Configuration
@@ -56,9 +56,9 @@ Below we define our fonts for emacs.
   (use-package treemacs-all-the-icons
     :after treemacs)
   (use-package doom-themes
-    :init (load-theme 'doom-dark+ t)
+    :init (load-theme 'doom-tokyo-night t)
     :config
-      (setq doom-themes-treemacs-theme "all-the-icons")
+      (setq doom-themes-treemacs-theme "doom-colors")
       (doom-themes-treemacs-config)
       (doom-themes-org-config))
 
@@ -129,7 +129,7 @@ Turn on the line numbers. Also, disable line numbers for some modes
 #+begin_src emacs-lisp
   (use-package emojify
     :hook (after-init . global-emojify-mode))
-#+end_sr
+#+end_src
 * Optimization
 ** Garbage cleaning
 #+begin_src emacs-lisp
@@ -149,7 +149,6 @@ Turn on the line numbers. Also, disable line numbers for some modes
                                (float-time
                                 (time-subtract after-init-time before-init-time)))
                        gcs-done)))
-
 #+end_src
 * Clipboard
 #+begin_src emacs-lisp
@@ -278,6 +277,7 @@ Turn on the line numbers. Also, disable line numbers for some modes
          "o" '(:ignore o :which-key "Org-Mode")
          "o a" '(org-agenda :which-key "Org Agenda")
          "o c" '(org-roam-capture :which-key "Org Roam Capture")
+         "o j" '(org-roam-dailies-goto-today :which-key "Show today's journal")
          "o d" '(org-roam-dailies-capture-today :which-key "Org Roam Dailies"))
 
   ;; LSP related
@@ -414,42 +414,51 @@ Using Ivy and Counsel
     (use-package counsel-projectile
       :config (counsel-projectile-mode))
 #+end_src
+** White-room mode
+A distraction-free plugin for writing
+#+begin_src emacs-lisp
+  (use-package writeroom-mode)
+
+#+end_src
 * OrgMode
 ** Custom Setup
 #+begin_src emacs-lisp
-  ;; Org-mode
-  (defun howard/org-mode-setup ()
-    (org-indent-mode)
-    (variable-pitch-mode 1)
-    (visual-line-mode 1))
+    ;; Org-mode
+    (defun howard/org-mode-setup ()
+      (org-indent-mode)
+      (variable-pitch-mode 1)
+      (visual-line-mode 1))
 
-  (defun howard/org-font-setup ()
-    ;; Replace list hyphen with dot
-    (font-lock-add-keywords 'org-mode
-                            '(("^ *\\([-]\\) "
-                               (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+    (defun howard/org-font-setup ()
+      ;; Replace list hyphen with dot
+      (font-lock-add-keywords 'org-mode
+                              '(("^ *\\([-]\\) "
+                                 (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
 
-    ;; Set faces for heading levels
-    (dolist (face '((org-level-1 . 1.35)
-                    (org-level-2 . 1.25)
-                    (org-level-3 . 1.2)
-                    (org-level-4 . 1.1)
-                    (org-level-5 . 1.0)
-                    (org-level-6 . 1.0)
-                    (org-level-7 . 1.0)
-                    (org-level-8 . 1.0)))
-      (set-face-attribute (car face) nil :font "Dejavu Sans Mono" :weight 'semi-bold :height (cdr face)))
+      ;; Set faces for heading levels
+      (dolist (face '((org-level-1 . 1.35)
+                      (org-level-2 . 1.15)
+                      (org-level-3 . 1.1)
+                      (org-level-4 . 1.05)
+                      (org-level-5 . 1.0)
+                      (org-level-6 . 1.0)
+                      (org-level-7 . 1.0)
+                      (org-level-8 . 1.0)))
+        (set-face-attribute (car face) nil :font "Dejavu Sans Mono" :weight 'semi-bold :height (cdr face)))
 
-    ;; Ensure that anything that should be fixed-pitch in Org files appears that way
-    (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
-    (set-face-attribute 'org-code nil   :inherit '(shadow fixed-pitch))
-    (set-face-attribute 'org-table nil   :inherit '(shadow fixed-pitch))
-    (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
-    (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
-    (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
-    (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
-    (set-face-attribute 'org-document-title nil :inherit 'variable-pitch))
-  (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
+      ;; Ensure that anything that should be fixed-pitch in Org files appears that way
+      (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
+      (set-face-attribute 'org-code nil   :inherit '(shadow fixed-pitch))
+      (set-face-attribute 'org-table nil   :inherit '(shadow fixed-pitch))
+      (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
+      (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+      (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+      (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
+      (set-face-attribute 'org-document-title nil :inherit 'variable-pitch :weight 'semi-bold :height 1.2)
+      (set-face-attribute 'org-document-info-keyword nil :inherit 'variable-pitch)
+      (set-face-attribute 'org-tag nil :inherit '(shadow fixed-pitch))
+      (set-face-attribute 'org-block-begin-line nil :inherit '(shadow fixed-pitch)))
+    (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
 #+end_src
 ** Org
 #+begin_src emacs-lisp
@@ -503,11 +512,11 @@ Using Ivy and Counsel
                 ("t" "Task" entry "* %^{Select your option|TODO|LATER|} %?\n SCHEDULE %^T" 
                    :target (file+head+olp "Tasks.org"
                                       "#+title: Tasks and Ideas"
-                                      ("Inbox")))
+                                      ("Tasks")))
                 ("i" "Idea" entry "* IDEA %?" 
                    :target (file+head+olp "Tasks.org"
                                       "#+title: Tasks and Ideas"
-                                      ("Tasks")))
+                                      ("Ideas")))
                 ("j" "journal" entry
                    "* %<%I:%M %p> - Journal  :journal:\n\n%?\n\n"
                    :target (file+head "%<%Y-%m-%d>.org"
@@ -540,10 +549,14 @@ Using Ivy and Counsel
 #+begin_src emacs-lisp
   (defun howard/org-babel-tangle-config()
     (when (string-equal (buffer-file-name)
-                        (expand-file-name "~/.emacs.d/Emacs.org"))
+			(expand-file-name "~/.emacs.d/Emacs.org"))
       (let ((org-confirm-babel-evaluate nil))
-        (org-babel-tangle))))
+	(org-babel-tangle))))
   (add-hook 'after-save-hook #'howard/org-babel-tangle-config)
+  ;; (org-babel-load-file
+  ;;   (expand-file-name
+  ;;    "Emacs.org"
+  ;;    user-emacs-directory))
 #+end_src
 * Coding
 ** LSP
@@ -594,6 +607,14 @@ Using Ivy and Counsel
   (use-package company-box
     :hook (company-mode . company-box-mode))
 #+end_src 
+** Tree-Sitter
+Provides better Code highlighting
+#+begin_src emacs-lisp
+  (use-package tree-sitter)
+  (use-package tree-sitter-langs)
+  (global-tree-sitter-mode)
+  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
+#+end_src
 * Shells
 ** vterm
 #+begin_src emacs-lisp
