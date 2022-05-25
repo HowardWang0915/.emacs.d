@@ -1,58 +1,6 @@
-# Git ignore file
-# Emacs temp. files
-\#*\#
-*~
-.#*
-tramp
-
-# ELC
-*.elc
-
-# Packages installed & byte-compiled by elpa
-elpa/
-
-# Graphene's geometry details
-.graphene-geometry
-
-# DS_Store
-.DS_Store
-
-# Emacs cache
-cache/
-.cache/
-bookmarks
-
-# Emacs server dir
-server/
-
-# Autosave list
-auto-save-list
-
-# Always keep .gitignore
+# Ignore everything
+*
+# But keep these
 !.gitignore
-
-# Org-mode
-.org-id-locations
-*_archive
-
-# Workspace
-workspace/
-
-# transiet files
-transient/
-
-# Eshell
-eshell/
-
-# Snippets
-snippets/
-
-# Flycheck
-flycheck_*
-
-# Language server
-eclipse.jdt.ls/
-.lsp-session*
-
-# Projectile
-*.eld
+!Emacs.org
+!init.el
