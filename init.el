@@ -204,6 +204,7 @@
        "s" '(:ignore s :which-key "Search")
        "s f" '(projectile--find-file :which-key "Search Project file")
        "s t" '(counsel-projectile-rg :which-key "Search text")
+       "s c" '(counsel-load-theme :which-key "Search colorscheme")
        "s b" '(counsel-switch-buffer :which-key "Switch buffer")
        "s p" '(projectile-switch-project : which-key "Search Projects"))
 
