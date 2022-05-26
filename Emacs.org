@@ -592,6 +592,11 @@ A distraction-free plugin for writing
     (add-hook 'java-mode-hook 'lsp))
   ; python
   (require 'dap-python)
+  ;; lua
+  (use-package lua-mode)
+  (use-package markdown-mode)
+  (custom-set-variables
+   '(markdown-command "/usr/sbin/pandoc"))
 #+end_src
 ** Completion Framework
 #+begin_src emacs-lisp

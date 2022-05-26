@@ -506,6 +506,11 @@
   (add-hook 'java-mode-hook 'lsp))
 ; python
 (require 'dap-python)
+;; lua
+(use-package lua-mode)
+(use-package markdown-mode)
+(custom-set-variables
+ '(markdown-command "/usr/sbin/pandoc"))
 
 ;; completion framework
 (use-package company
