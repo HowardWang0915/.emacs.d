@@ -400,21 +400,22 @@
 (use-package org
   :hook (org-mode . howard/org-mode-setup)
   :config
+  (require 'org-tempo)
   (setq org-ellipsis " ▾")
   (howard/org-font-setup)
   (setq org-agenda-start-with-log-mode t)
   (setq org-log-done 'time)
   (setq org-log-into-drawer t)
-  (setq org-agenda-files
+  (setq org-agenda-window-setup 'only-window)
+  (setq org-src-window-setup 'only-window)
+  (setq org-hide-emphasis-markers t)
+  (setq org-agenda-file
         '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org"))
   (setq org-todo-keywords
       '((sequence "TODO(t)" "NEXT(n)" "IDEA(i)" "|" "DONE(d!)")
         (sequence "LATER(l)" "|" "WAIT(w)" "CANCELED(c)")))
   (advice-add 'org-refile :after 'org-save-all-org-buffers)
-;; Configure custom agenda views
        (howard/org-font-setup))
-;; The old template system
-(require 'org-tempo)
 ;; Let org-mode be evil
 (use-package evil-org
   :ensure t
@@ -424,38 +425,40 @@
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
 
+
+
 (use-package org-roam
-  :ensure t
-  :hook
-  (after-init . org-roam-mode)
-  :custom
-  (org-roam-directory "/mnt/d/OrgFiles/OrgRoam")
-  (org-roam-completion-everywhere t)
-  (org-roam-dailies-directory "journal/")
-  (org-roam-capture-templates
+    :ensure t
+    :hook
+    (after-init . org-roam-mode)
+    :custom
+    (org-roam-directory "/mnt/d/OrgFiles/OrgRoam")
+    (org-roam-completion-everywhere t)
+    (org-roam-dailies-directory "journal/")
+    (org-roam-capture-templates
     '(("d" "default" plain "%?"
-       :target (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
-                          "#+title: ${title}\n")
-       :unnarrowed t)))
-  (org-roam-dailies-capture-templates
+        :target (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                            "#+title: ${title}\n")
+        :unnarrowed t)))
+    (org-roam-dailies-capture-templates
     '(("d" "default" entry "* %?"
-       :target (file+head "%<%Y-%m-%d>.org"
-                          "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))
+        :target (file+head "%<%Y-%m-%d>.org"
+                            "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))
     ("t" "Task" entry "* %^{Select your option|TODO|LATER|} %?\n SCHEDULE %^T" 
-       :target (file+head+olp "Tasks.org"
-                          "#+title: Tasks and Ideas"
-                          ("Tasks")))
+        :target (file+head+olp "Tasks.org"
+                            "#+title: Tasks and Ideas"
+                            ("Tasks")))
     ("i" "Idea" entry "* IDEA %?" 
-       :target (file+head+olp "Tasks.org"
-                          "#+title: Tasks and Ideas"
-                          ("Ideas")))
+        :target (file+head+olp "Tasks.org"
+                            "#+title: Tasks and Ideas"
+                            ("Ideas")))
     ("j" "journal" entry
-       "* %<%I:%M %p> - Journal  :journal:\n\n%?\n\n"
-       :target (file+head "%<%Y-%m-%d>.org"
-                          "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))))
-  :config
-  (require 'org-roam-dailies) ;; Ensure the keymap is available
-  (org-roam-db-autosync-mode))
+        "* %<%I:%M %p> - Journal  :journal:\n\n%?\n\n"
+        :target (file+head "%<%Y-%m-%d>.org"
+                            "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))))
+    :config
+    (require 'org-roam-dailies) ;; Ensure the keymap is available
+    (org-roam-db-autosync-mode))
 
 (use-package org-bullets
   :after org
