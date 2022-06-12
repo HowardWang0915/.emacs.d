@@ -1,3 +1,18 @@
+;; Initialize package sources
+(require 'package)
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                         ("org" . "https://orgmode.org/elpa/")
+                         ("elpa" . "https://elpa.gnu.org/packages/")))
+(package-initialize)
+(unless package-archive-contents
+    (package-refresh-contents))
+
+;; Initialize use-package on non-Linux platforms
+(unless (package-installed-p 'use-package)
+   (package-install 'use-package))
+(require 'use-package)
+(setq use-package-always-ensure t)
+
 (setq inhibit-startup-message t)
 
 (scroll-bar-mode -1)            ; Disable visible scrollbar
@@ -210,13 +225,13 @@
 
 ;; neotree
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-       "t" '(treemacs :which-key "TreeMacs"))
+       "e" '(treemacs :which-key "TreeMacs"))
 
 ;; Elisp evaluation
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-       "e" '(:ignore e :which-key "Elisp Eval")
-       "e l" '(eval-last-sexp :which-key "Eval-Last-Sexp")
-       "e r" '(eval-region :which-key "Eval-Region"))
+       "x" '(:ignore e :which-key "Elisp Eval")
+       "x l" '(eval-last-sexp :which-key "Eval-Last-Sexp")
+       "x r" '(eval-region :which-key "Eval-Region"))
 
 ;; Configuration related
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
@@ -253,22 +268,7 @@
        "g u" '(git-gutter:revert-hunk :which-key "Unstage Hunk")
        "g k" '(git-gutter:previous-hunk :which-key "Prev Hunk"))
 
-;; Initialize package sources
-(require 'package)
-(setq package-archives '(("melpa" . "https://melpa.org/packages/")
-                         ("org" . "https://orgmode.org/elpa/")
-                         ("elpa" . "https://elpa.gnu.org/packages/")))
-(package-initialize)
-(unless package-archive-contents
-    (package-refresh-contents))
-
-;; Initialize use-package on non-Linux platforms
-(unless (package-installed-p 'use-package)
-   (package-install 'use-package))
-
 ;; Install Ivy
-(require 'use-package)
-(setq use-package-always-ensure t)
 (use-package ivy
 :diminish
 :bind (("C-s" . swiper)
