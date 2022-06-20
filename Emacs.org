@@ -18,6 +18,13 @@
   (require 'use-package)
   (setq use-package-always-ensure t)
 #+end_src
+
+* System settings
+In this section, we want to identify the type of our system to do system-specific settings
+#+begin_src emacs-lisp
+  (setq howard/is-old-laptop (string= system-name "howard-vivobooks15x510uf"))
+  (setq howard/is-new-laptop (string= system-name "LAPTOP-LDFS2SBR"))
+#+end_src
 * Basic UI Configuration
 ** Default UI
 In this section, we want to disable a lot of things that comes out out of the box of Emacs, which includes tool bars and menus.
@@ -29,8 +36,9 @@ In this section, we want to disable a lot of things that comes out out of the bo
 
   (tooltip-mode -1)               ; Disable tooltips
   (menu-bar-mode -1)              ; Disable menu bar
-  (setq split-width-threshold 0)  ; default vertical split
+  (setq split-width-threshold 75)  ; default vertical split
   (setq make-backup-files nil)    ; Don't do backups!
+  (setq pop-up-windows nil) 
 #+end_src
 ** Scrolling
 The default scrolling in emacs sucks.
@@ -139,7 +147,7 @@ Turn on the line numbers. Also, disable line numbers for some modes
 #+begin_src emacs-lisp
   (use-package treemacs
     :config
-    (setq treemacs-width 25))
+    (setq treemacs-width 30))
   (use-package lsp-treemacs
     :commands lsp-treemacs-errors-list)
 #+end_src
@@ -204,42 +212,47 @@ Turn on the line numbers. Also, disable line numbers for some modes
 #+end_src
 ** Evil Mode
 #+begin_src emacs-lisp
-  ; Install evil mode
-  (use-package evil
-    :init
-    (setq evil-want-integration t)
-    (setq evil-want-keybinding nil)
-    (setq evil-want-C-u-scroll t)
-    (setq evil-want-C-i-jump t)
-    (setq evil-vsplit-windows-right t)
-    :config
-    (evil-mode 1)
-    (key-chord-mode 1) ;; Allow jk to exit
-    (key-chord-define evil-insert-state-map  "jk" 'evil-normal-state)
-    (key-chord-define evil-insert-state-map  "kj" 'evil-normal-state)
-    ;; Use visual line motions even outside of visual-line-mode buffers
-    (evil-global-set-key 'motion "j" 'evil-next-visual-line)
-    (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
+    ; Install evil mode
+    (use-package evil
+      :init
+      (setq evil-want-integration t)
+      (setq evil-want-keybinding nil)
+      (setq evil-want-C-u-scroll t)
+      (setq evil-want-C-i-jump t)
+      (setq evil-vsplit-windows-right t)
+      :config
+      (evil-mode 1)
+      (key-chord-mode 1) ;; Allow jk to exit
+      (key-chord-define evil-insert-state-map  "jk" 'evil-normal-state)
+      (key-chord-define evil-insert-state-map  "kj" 'evil-normal-state)
+      ;; Use visual line motions even outside of visual-line-mode buffers
+      (evil-global-set-key 'motion "j" 'evil-next-visual-line)
+      (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
 
-    (evil-set-initial-state 'messages-buffer-mode 'normal)
-    (evil-set-initial-state 'dashboard-mode 'normal))
+      (evil-set-initial-state 'messages-buffer-mode 'normal)
+      (evil-set-initial-state 'dashboard-mode 'normal)
+      :bind (:map evil-normal-state-map
+                  ("L" . 'evil-next-buffer)
+                  ("H" . 'evil-prev-buffer)
+                  ("C-j" . 'evil-window-next)
+                  ("C-k" . 'evil-window-prev)))
 
-  ; A modular evil experience
-  (use-package evil-collection
-    :after evil
-    :config
-    (evil-collection-init))
+    ; A modular evil experience
+    (use-package evil-collection
+      :after evil
+      :config
+      (evil-collection-init))
 
-  ; Undo tree
-  (use-package undo-tree
-    :ensure t
-    :after evil
-    :init
-    (setq undo-tree-auto-save-history nil)
-    :diminish
-    :config
-    (evil-set-undo-system 'undo-tree)
-    (global-undo-tree-mode 1))
+    ; Undo tree
+    (use-package undo-tree
+      :ensure t
+      :after evil
+      :init
+      (setq undo-tree-auto-save-history nil)
+      :diminish
+      :config
+      (evil-set-undo-system 'undo-tree)
+      (global-undo-tree-mode 1))
 #+end_src
 ** General Package
 #+begin_src emacs-lisp
@@ -251,15 +264,6 @@ Turn on the line numbers. Also, disable line numbers for some modes
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
          "." '(counsel-find-file :which-key "Find File")
          "SPC" '(counsel-M-x :which-key "M-x"))
-  ;; lsp hover
-  (nvmap :states '(normal visual) :keymaps 'override
-         "K" '(lsp-ui-doc-show :which-key "Hover"))
-
-  ;; switch buffer
-  (nvmap :states '(normal) :keymaps 'override
-         "L" '(lambda() (interactive (next-buffer 1)))
-         "H" '(lambda() (interactive (previous-buffer 1))))
-
   ;; searching utilities
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
          "s" '(:ignore s :which-key "Search")
@@ -276,6 +280,7 @@ Turn on the line numbers. Also, disable line numbers for some modes
   ;; Elisp evaluation
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
          "x" '(:ignore e :which-key "Elisp Eval")
+         "x e" '(eval-expression :which-key "Eval expression")
          "x l" '(eval-last-sexp :which-key "Eval-Last-Sexp")
          "x r" '(eval-region :which-key "Eval-Region"))
 
@@ -291,13 +296,18 @@ Turn on the line numbers. Also, disable line numbers for some modes
          "h f" '(counsel-describe-function :which-key "Describe Function")
          "h v" '(describe-variable :which-key "Describe Variable"))
 
-  ;; Help system
+  ;; Org mode system
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-         "o" '(:ignore o :which-key "Org-Mode")
+         "o" '(:ignore t :which-key "Org-Mode")
+         "o r" '(:ignore t :which-key "Org-Roam")
+         "o d" '(:ignore t :which-key "Org-Dailies")
          "o a" '(org-agenda :which-key "Org Agenda")
-         "o c" '(org-roam-capture :which-key "Org Roam Capture")
-         "o j" '(org-roam-dailies-goto-today :which-key "Show today's journal")
-         "o d" '(org-roam-dailies-capture-today :which-key "Org Roam Dailies"))
+         "o s" '(org-schedule :which-key "Org Schedule")
+         "o n" '(org-narrow-to-subtree :which-key "Org Narrow to Tree")
+         "o w" '(widen :which-key "Widen")
+         "o r c" '(org-roam-capture :which-key "Org Roam Capture")
+         "o d t" '(org-roam-dailies-goto-today :which-key "Show Dailies Today")
+         "o d c" '(org-roam-dailies-capture-today :which-key "Org Dailies Capture"))
 
   ;; LSP related
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
@@ -406,6 +416,11 @@ Using Ivy and Counsel
     (evil-collection-define-key 'normal 'dired-mode-map
       "h" 'dired-up-directory
       "l" 'dired-find-file))
+  (use-package ranger
+    :config
+    (setq ranger-preview-file t)
+    (ranger-override-dired-mode t))
+
 #+end_src
 ** Projectile
 #+begin_src emacs-lisp
@@ -476,11 +491,12 @@ A distraction-free plugin for writing
     (setq org-agenda-window-setup 'only-window)
     (setq org-src-window-setup 'only-window)
     (setq org-hide-emphasis-markers t)
-    (setq org-agenda-file
-          '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org"))
+    (setq org-agenda-files
+          (if howard/is-new-laptop
+              '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
+              '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
     (setq org-todo-keywords
-        '((sequence "TODO(t)" "NEXT(n)" "IDEA(i)" "|" "DONE(d!)")
-          (sequence "LATER(l)" "|" "WAIT(w)" "CANCELED(c)")))
+        '((sequence "TODO(t)" "LATER(n)" "PROJECT(p)" "|" "DONE(d!)" "CANCELED(c)")))
     (advice-add 'org-refile :after 'org-save-all-org-buffers)
          (howard/org-font-setup))
   ;; Let org-mode be evil
@@ -493,8 +509,33 @@ A distraction-free plugin for writing
     (evil-org-agenda-set-keys))
 #+end_src
 ** Org-agenda
+We define a function that can help us refile our tasks
 #+begin_src emacs-lisp
+  (defun howard/org-refile-to-datetree (&optional file)
+    "Refile a subtree to a datetree corresponding to it's timestamp.
 
+  The current time is used if the entry has no timestamp. If FILE
+  is nil, refile in the current file."
+    (interactive "f")
+    (let* ((datetree-date (or (org-entry-get nil "TIMESTAMP" t)
+                              (org-read-date t nil "now")))
+           (date (org-date-to-gregorian datetree-date))
+           )
+      (with-current-buffer (current-buffer)
+        (save-excursion
+          (org-cut-subtree)
+          (if file (find-file file))
+          (org-datetree-find-date-create date)
+          (org-narrow-to-subtree)
+          (show-subtree)
+          (org-end-of-subtree t)
+          (newline)
+          (goto-char (point-max))
+          (org-paste-subtree 4)
+          (widen)
+          ))
+      )
+    )
 #+end_src
 ** Org Roam
 #+begin_src emacs-lisp
@@ -502,8 +543,12 @@ A distraction-free plugin for writing
         :ensure t
         :hook
         (after-init . org-roam-mode)
+        :config
+        (setq org-roam-directory
+              (if howard/is-new-laptop
+                    "/mnt/d/OrgFiles/OrgRoam"
+                    "~/Documents/Org-Files/OrgRoam/"))
         :custom
-        (org-roam-directory "/mnt/d/OrgFiles/OrgRoam")
         (org-roam-completion-everywhere t)
         (org-roam-dailies-directory "journal/")
         (org-roam-capture-templates
@@ -515,14 +560,14 @@ A distraction-free plugin for writing
         '(("d" "default" entry "* %?"
             :target (file+head "%<%Y-%m-%d>.org"
                                 "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))
-        ("t" "Task" entry "* %^{Select your option|TODO|LATER|} %?\n SCHEDULE %^T" 
+        ("t" "Task" entry "* %^{Select your option|TODO|LATER|} %?\n SCHEDULED: %^T" 
             :target (file+head+olp "Tasks.org"
                                 "#+title: Tasks and Ideas"
                                 ("Tasks")))
-        ("i" "Idea" entry "* IDEA %?" 
+        ("p" "Project" entry "* PROJECT %?" 
             :target (file+head+olp "Tasks.org"
                                 "#+title: Tasks and Ideas"
-                                ("Ideas")))
+                                ("Projects")))
         ("j" "journal" entry
             "* %<%I:%M %p> - Journal  :journal:\n\n%?\n\n"
             :target (file+head "%<%Y-%m-%d>.org"
@@ -568,11 +613,16 @@ A distraction-free plugin for writing
 ** LSP
 #+begin_src emacs-lisp
   (use-package lsp-mode
-    :hook ((java-mode) . lsp-deferred)
+    :hook
+    ((java-mode) . lsp-deferred)
+    ((python-mode) . lsp-deferred)
+    ((lua-mode) . lsp-deferred)
     :commands (lsp lsp-deferred)
     :init
     (setq lsp-keymap-prefix "C-c l")
     :config
+    (evil-collection-define-key 'normal 'lsp-mode-map
+      "K" 'lsp-ui-doc-show)
     (lsp-enable-which-key-integration t))
 
   (use-package lsp-ui)
@@ -590,18 +640,28 @@ A distraction-free plugin for writing
     :config (yas-global-mode 1))
 #+end_src
 ** Languages
+In this section, we will configure for different language settings
 #+begin_src emacs-lisp
   ;; Add language servers here
   (use-package lsp-java
     :config
     (add-hook 'java-mode-hook 'lsp))
+
+
+  (use-package lsp-pyright
+    :ensure t
+    :hook (python-mode . (lambda ()
+                          (require 'lsp-pyright)
+                          (lsp))))  ; or lsp-deferred
   ; python
   (require 'dap-python)
   ;; lua
-  (use-package lua-mode)
-  (use-package markdown-mode)
-  (custom-set-variables
-   '(markdown-command "/usr/sbin/pandoc"))
+  (use-package lua-mode
+    :hook (lua-mode . electric-pair-mode))
+  (use-package markdown-mode
+    :custom (markdown-command "/usr/sbin/pandoc"))
+  ; emacs-lisp mode
+  (add-hook 'emacs-lisp-mode-hook 'electric-pair-mode)
 #+end_src
 ** Completion Framework
 #+begin_src emacs-lisp
@@ -629,9 +689,10 @@ Provides better Code highlighting
 * Shells
 ** vterm
 #+begin_src emacs-lisp
-  (use-package vterm)
-  (setq shell-file-name "/bin/zsh"
-        vterm-max-scrollback 5000)
+  (use-package vterm
+    :config
+    (setq shell-file-name "/bin/zsh"
+            vterm-max-scrollback 5000))
 #+end_src
 ** eshell
 #+begin_src emacs-lisp

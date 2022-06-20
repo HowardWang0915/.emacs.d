@@ -13,6 +13,9 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 
+(setq howard/is-old-laptop (string= system-name "howard-vivobooks15x510uf"))
+(setq howard/is-new-laptop (string= system-name "LAPTOP-LDFS2SBR"))
+
 (setq inhibit-startup-message t)
 
 (scroll-bar-mode -1)            ; Disable visible scrollbar
@@ -20,8 +23,9 @@
 
 (tooltip-mode -1)               ; Disable tooltips
 (menu-bar-mode -1)              ; Disable menu bar
-(setq split-width-threshold 0)  ; default vertical split
+(setq split-width-threshold 75)  ; default vertical split
 (setq make-backup-files nil)    ; Don't do backups!
+(setq pop-up-windows nil)
 
 ; A vim like scrolling expierence
 (setq scroll-margin 14)
@@ -111,7 +115,7 @@
 
 (use-package treemacs
   :config
-  (setq treemacs-width 25))
+  (setq treemacs-width 30))
 (use-package lsp-treemacs
   :commands lsp-treemacs-errors-list)
 
@@ -178,7 +182,12 @@
   (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
 
   (evil-set-initial-state 'messages-buffer-mode 'normal)
-  (evil-set-initial-state 'dashboard-mode 'normal))
+  (evil-set-initial-state 'dashboard-mode 'normal)
+  :bind (:map evil-normal-state-map
+              ("L" . 'evil-next-buffer)
+              ("H" . 'evil-prev-buffer)
+              ("C-j" . 'evil-window-next)
+              ("C-k" . 'evil-window-prev)))
 
 ; A modular evil experience
 (use-package evil-collection
@@ -205,15 +214,6 @@
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
        "." '(counsel-find-file :which-key "Find File")
        "SPC" '(counsel-M-x :which-key "M-x"))
-;; lsp hover
-(nvmap :states '(normal visual) :keymaps 'override
-       "K" '(lsp-ui-doc-show :which-key "Hover"))
-
-;; switch buffer
-(nvmap :states '(normal) :keymaps 'override
-       "L" '(lambda() (interactive (next-buffer 1)))
-       "H" '(lambda() (interactive (previous-buffer 1))))
-
 ;; searching utilities
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
        "s" '(:ignore s :which-key "Search")
@@ -230,6 +230,7 @@
 ;; Elisp evaluation
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
        "x" '(:ignore e :which-key "Elisp Eval")
+       "x e" '(eval-expression :which-key "Eval expression")
        "x l" '(eval-last-sexp :which-key "Eval-Last-Sexp")
        "x r" '(eval-region :which-key "Eval-Region"))
 
@@ -245,13 +246,18 @@
        "h f" '(counsel-describe-function :which-key "Describe Function")
        "h v" '(describe-variable :which-key "Describe Variable"))
 
-;; Help system
+;; Org mode system
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-       "o" '(:ignore o :which-key "Org-Mode")
+       "o" '(:ignore t :which-key "Org-Mode")
+       "o r" '(:ignore t :which-key "Org-Roam")
+       "o d" '(:ignore t :which-key "Org-Dailies")
        "o a" '(org-agenda :which-key "Org Agenda")
-       "o c" '(org-roam-capture :which-key "Org Roam Capture")
-       "o j" '(org-roam-dailies-goto-today :which-key "Show today's journal")
-       "o d" '(org-roam-dailies-capture-today :which-key "Org Roam Dailies"))
+       "o s" '(org-schedule :which-key "Org Schedule")
+       "o n" '(org-narrow-to-subtree :which-key "Org Narrow to Tree")
+       "o w" '(widen :which-key "Widen")
+       "o r c" '(org-roam-capture :which-key "Org Roam Capture")
+       "o d t" '(org-roam-dailies-goto-today :which-key "Show Dailies Today")
+       "o d c" '(org-roam-dailies-capture-today :which-key "Org Dailies Capture"))
 
 ;; LSP related
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
@@ -349,6 +355,10 @@
   (evil-collection-define-key 'normal 'dired-mode-map
     "h" 'dired-up-directory
     "l" 'dired-find-file))
+(use-package ranger
+  :config
+  (setq ranger-preview-file t)
+  (ranger-override-dired-mode t))
 
 ;; Project management
 (use-package rg) ; searching for text in project
@@ -409,11 +419,12 @@
   (setq org-agenda-window-setup 'only-window)
   (setq org-src-window-setup 'only-window)
   (setq org-hide-emphasis-markers t)
-  (setq org-agenda-file
-        '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org"))
+  (setq org-agenda-files
+        (if howard/is-new-laptop
+            '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
+            '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
   (setq org-todo-keywords
-      '((sequence "TODO(t)" "NEXT(n)" "IDEA(i)" "|" "DONE(d!)")
-        (sequence "LATER(l)" "|" "WAIT(w)" "CANCELED(c)")))
+      '((sequence "TODO(t)" "LATER(n)" "PROJECT(p)" "|" "DONE(d!)" "CANCELED(c)")))
   (advice-add 'org-refile :after 'org-save-all-org-buffers)
        (howard/org-font-setup))
 ;; Let org-mode be evil
@@ -425,14 +436,42 @@
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
 
+(defun howard/org-refile-to-datetree (&optional file)
+  "Refile a subtree to a datetree corresponding to it's timestamp.
 
+The current time is used if the entry has no timestamp. If FILE
+is nil, refile in the current file."
+  (interactive "f")
+  (let* ((datetree-date (or (org-entry-get nil "TIMESTAMP" t)
+                            (org-read-date t nil "now")))
+         (date (org-date-to-gregorian datetree-date))
+         )
+    (with-current-buffer (current-buffer)
+      (save-excursion
+        (org-cut-subtree)
+        (if file (find-file file))
+        (org-datetree-find-date-create date)
+        (org-narrow-to-subtree)
+        (show-subtree)
+        (org-end-of-subtree t)
+        (newline)
+        (goto-char (point-max))
+        (org-paste-subtree 4)
+        (widen)
+        ))
+    )
+  )
 
 (use-package org-roam
     :ensure t
     :hook
     (after-init . org-roam-mode)
+    :config
+    (setq org-roam-directory
+          (if howard/is-new-laptop
+                "/mnt/d/OrgFiles/OrgRoam"
+                "~/Documents/Org-Files/OrgRoam/"))
     :custom
-    (org-roam-directory "/mnt/d/OrgFiles/OrgRoam")
     (org-roam-completion-everywhere t)
     (org-roam-dailies-directory "journal/")
     (org-roam-capture-templates
@@ -444,14 +483,14 @@
     '(("d" "default" entry "* %?"
         :target (file+head "%<%Y-%m-%d>.org"
                             "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))
-    ("t" "Task" entry "* %^{Select your option|TODO|LATER|} %?\n SCHEDULE %^T" 
+    ("t" "Task" entry "* %^{Select your option|TODO|LATER|} %?\n SCHEDULED: %^T" 
         :target (file+head+olp "Tasks.org"
                             "#+title: Tasks and Ideas"
                             ("Tasks")))
-    ("i" "Idea" entry "* IDEA %?" 
+    ("p" "Project" entry "* PROJECT %?" 
         :target (file+head+olp "Tasks.org"
                             "#+title: Tasks and Ideas"
-                            ("Ideas")))
+                            ("Projects")))
     ("j" "journal" entry
         "* %<%I:%M %p> - Journal  :journal:\n\n%?\n\n"
         :target (file+head "%<%Y-%m-%d>.org"
@@ -486,11 +525,16 @@
 ;;    user-emacs-directory))
 
 (use-package lsp-mode
-  :hook ((java-mode) . lsp-deferred)
+  :hook
+  ((java-mode) . lsp-deferred)
+  ((python-mode) . lsp-deferred)
+  ((lua-mode) . lsp-deferred)
   :commands (lsp lsp-deferred)
   :init
   (setq lsp-keymap-prefix "C-c l")
   :config
+  (evil-collection-define-key 'normal 'lsp-mode-map
+    "K" 'lsp-ui-doc-show)
   (lsp-enable-which-key-integration t))
 
 (use-package lsp-ui)
@@ -507,13 +551,22 @@
 (use-package lsp-java
   :config
   (add-hook 'java-mode-hook 'lsp))
+
+
+(use-package lsp-pyright
+  :ensure t
+  :hook (python-mode . (lambda ()
+                        (require 'lsp-pyright)
+                        (lsp))))  ; or lsp-deferred
 ; python
 (require 'dap-python)
 ;; lua
-(use-package lua-mode)
-(use-package markdown-mode)
-(custom-set-variables
- '(markdown-command "/usr/sbin/pandoc"))
+(use-package lua-mode
+  :hook (lua-mode . electric-pair-mode))
+(use-package markdown-mode
+  :custom (markdown-command "/usr/sbin/pandoc"))
+; emacs-lisp mode
+(add-hook 'emacs-lisp-mode-hook 'electric-pair-mode)
 
 ;; completion framework
 (use-package company
@@ -533,9 +586,10 @@
 (global-tree-sitter-mode)
 (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
 
-(use-package vterm)
-(setq shell-file-name "/bin/zsh"
-      vterm-max-scrollback 5000)
+(use-package vterm
+  :config
+  (setq shell-file-name "/bin/zsh"
+          vterm-max-scrollback 5000))
 
 (use-package eshell-syntax-highlighting
   :after esh-mode
