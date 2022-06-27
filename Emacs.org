@@ -38,7 +38,8 @@ In this section, we want to disable a lot of things that comes out out of the bo
   (menu-bar-mode -1)              ; Disable menu bar
   (setq split-width-threshold 75)  ; default vertical split
   (setq make-backup-files nil)    ; Don't do backups!
-  (setq pop-up-windows nil) 
+  (setq pop-up-windows nil)       ; Don't show popup windows
+  (display-time)                  ; Show the current time in modeline
 #+end_src
 ** Scrolling
 The default scrolling in emacs sucks.
@@ -212,47 +213,50 @@ Turn on the line numbers. Also, disable line numbers for some modes
 #+end_src
 ** Evil Mode
 #+begin_src emacs-lisp
-    ; Install evil mode
-    (use-package evil
-      :init
-      (setq evil-want-integration t)
-      (setq evil-want-keybinding nil)
-      (setq evil-want-C-u-scroll t)
-      (setq evil-want-C-i-jump t)
-      (setq evil-vsplit-windows-right t)
-      :config
-      (evil-mode 1)
-      (key-chord-mode 1) ;; Allow jk to exit
-      (key-chord-define evil-insert-state-map  "jk" 'evil-normal-state)
-      (key-chord-define evil-insert-state-map  "kj" 'evil-normal-state)
-      ;; Use visual line motions even outside of visual-line-mode buffers
-      (evil-global-set-key 'motion "j" 'evil-next-visual-line)
-      (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
+  ; Install evil mode
+  (use-package evil
+    :init
+    (setq evil-want-integration t)
+    (setq evil-want-keybinding nil)
+    (setq evil-want-C-u-scroll t)
+    (setq evil-want-C-i-jump t)
+    (setq evil-vsplit-windows-right t)
+    :config
+    (evil-mode 1)
+    (key-chord-mode 1) ;; Allow jk to exit
+    (key-chord-define evil-insert-state-map  "jk" 'evil-normal-state)
+    (key-chord-define evil-insert-state-map  "kj" 'evil-normal-state)
+    ;; Use visual line motions even outside of visual-line-mode buffers
+    (evil-global-set-key 'motion "j" 'evil-next-visual-line)
+    (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
 
-      (evil-set-initial-state 'messages-buffer-mode 'normal)
-      (evil-set-initial-state 'dashboard-mode 'normal)
-      :bind (:map evil-normal-state-map
-                  ("L" . 'evil-next-buffer)
-                  ("H" . 'evil-prev-buffer)
-                  ("C-j" . 'evil-window-next)
-                  ("C-k" . 'evil-window-prev)))
+    (evil-set-initial-state 'messages-buffer-mode 'normal)
+    (evil-set-initial-state 'dashboard-mode 'normal)
+    :bind (:map evil-normal-state-map
+                ("L" . 'evil-next-buffer)
+                ("H" . 'evil-prev-buffer)
+                ("C-j" . 'evil-window-next)
+                ("C-k" . 'evil-window-prev)
+            :map evil-insert-state-map
+                ("C-j" . 'evil-window-next)
+                ("C-k" . 'evil-window-prev)))
 
-    ; A modular evil experience
-    (use-package evil-collection
-      :after evil
-      :config
-      (evil-collection-init))
+  ; A modular evil experience
+  (use-package evil-collection
+    :after evil
+    :config
+    (evil-collection-init))
 
-    ; Undo tree
-    (use-package undo-tree
-      :ensure t
-      :after evil
-      :init
-      (setq undo-tree-auto-save-history nil)
-      :diminish
-      :config
-      (evil-set-undo-system 'undo-tree)
-      (global-undo-tree-mode 1))
+  ; Undo tree
+  (use-package undo-tree
+    :ensure t
+    :after evil
+    :init
+    (setq undo-tree-auto-save-history nil)
+    :diminish
+    :config
+    (evil-set-undo-system 'undo-tree)
+    (global-undo-tree-mode 1))
 #+end_src
 ** General Package
 #+begin_src emacs-lisp
@@ -510,37 +514,38 @@ Leetcode practice in Emacs!
 #+end_src
 ** Org
 #+begin_src emacs-lisp
-    ;; Org Mode Config
-    (use-package org
-      :hook (org-mode . howard/org-mode-setup)
-      :config
-      (require 'org-tempo)
-      (setq org-ellipsis " ▾")
-      (howard/org-font-setup)
-      (setq org-agenda-start-with-log-mode t)
-      (setq org-log-done 'time)
-      (setq org-log-into-drawer t)
-      (setq org-agenda-window-setup 'only-window)
-      (setq org-src-window-setup 'only-window)
-      (setq org-hide-emphasis-markers t)
-      (org-babel-do-load-languages
-       'org-babel-load-languages '((python . t)))
-      (setq org-agenda-files
-            (if howard/is-new-laptop
-                '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
-                '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
-      (setq org-todo-keywords
-          '((sequence "TODO(t)" "LATER(n)" "PROJECT(p)" "|" "DONE(d!)" "CANCELED(c)")))
-      (advice-add 'org-refile :after 'org-save-all-org-buffers)
-           (howard/org-font-setup))
-    ;; Let org-mode be evil
-    (use-package evil-org
-      :ensure t
-      :after org
-      :hook (org-mode . (lambda () evil-org-mode))
-      :config
-      (require 'evil-org-agenda)
-      (evil-org-agenda-set-keys))
+  ;; Org Mode Config
+  (use-package org
+    :hook (org-mode . howard/org-mode-setup)
+    :config
+    (require 'org-tempo)
+    (setq org-ellipsis " ▾")
+    (howard/org-font-setup)
+    (setq org-agenda-start-with-log-mode t)
+    (setq org-log-done 'time)
+    (setq org-log-into-drawer t)
+    (setq org-agenda-window-setup 'only-window)
+    (setq org-src-window-setup 'only-window)
+    (setq org-hide-emphasis-markers t)
+    (plist-put org-format-latex-options :scale 1.5)
+    (org-babel-do-load-languages
+     'org-babel-load-languages '((python . t)))
+    (setq org-agenda-files
+          (if howard/is-new-laptop
+              '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
+              '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
+    (setq org-todo-keywords
+        '((sequence "TODO(t)" "LATER(n)" "PROJECT(p)" "|" "DONE(d!)" "CANCELED(c)")))
+    (advice-add 'org-refile :after 'org-save-all-org-buffers)
+         (howard/org-font-setup))
+  ;; Let org-mode be evil
+  (use-package evil-org
+    :ensure t
+    :after org
+    :hook (org-mode . (lambda () evil-org-mode))
+    :config
+    (require 'evil-org-agenda)
+    (evil-org-agenda-set-keys))
 #+end_src
 ** Org-agenda
 We define a function that can help us refile our tasks

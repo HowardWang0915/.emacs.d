@@ -25,7 +25,8 @@
 (menu-bar-mode -1)              ; Disable menu bar
 (setq split-width-threshold 75)  ; default vertical split
 (setq make-backup-files nil)    ; Don't do backups!
-(setq pop-up-windows nil)
+(setq pop-up-windows nil)       ; Don't show popup windows
+(display-time)                  ; Show the current time in modeline
 
 ; A vim like scrolling expierence
 (setq scroll-margin 14)
@@ -186,6 +187,9 @@
   :bind (:map evil-normal-state-map
               ("L" . 'evil-next-buffer)
               ("H" . 'evil-prev-buffer)
+              ("C-j" . 'evil-window-next)
+              ("C-k" . 'evil-window-prev)
+          :map evil-insert-state-map
               ("C-j" . 'evil-window-next)
               ("C-k" . 'evil-window-prev)))
 
@@ -443,6 +447,7 @@
   (setq org-agenda-window-setup 'only-window)
   (setq org-src-window-setup 'only-window)
   (setq org-hide-emphasis-markers t)
+  (plist-put org-format-latex-options :scale 1.5)
   (org-babel-do-load-languages
    'org-babel-load-languages '((python . t)))
   (setq org-agenda-files
