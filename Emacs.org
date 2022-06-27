@@ -306,6 +306,7 @@ Turn on the line numbers. Also, disable line numbers for some modes
          "o n" '(org-narrow-to-subtree :which-key "Org Narrow to Tree")
          "o w" '(widen :which-key "Widen")
          "o r c" '(org-roam-capture :which-key "Org Roam Capture")
+         "o r f" '(org-roam-node-find :which-key "Find Org Roam file")
          "o d t" '(org-roam-dailies-goto-today :which-key "Show Dailies Today")
          "o d c" '(org-roam-dailies-capture-today :which-key "Org Dailies Capture"))
 
@@ -406,6 +407,10 @@ Using Ivy and Counsel
     (define-fringe-bitmap 'git-gutter-fr:modified [224] nil nil '(center repeated))
     (define-fringe-bitmap 'git-gutter-fr:deleted [128 192 224 240] nil nil 'bottom))
 #+end_src
+** Pdf-tool
+#+begin_src emacs-lisp
+  (use-package pdf-tools)
+#+end_src
 ** Dired
 #+begin_src emacs-lisp
   ;; Better config for dired
@@ -436,77 +441,106 @@ A distraction-free plugin for writing
 #+begin_src emacs-lisp
   (use-package writeroom-mode)
 #+end_src
+** Shrface
+A better html render system
+#+begin_src emacs-lisp
+  (use-package shrface
+    :defer t
+    :config
+    (shrface-basic)
+    (shrface-trial)
+    (shrface-default-keybindings) ; setup default keybindings
+    (setq shrface-href-versatile t))
+
+  (use-package eww
+    :defer t
+    :init
+    (add-hook 'eww-after-render-hook #'shrface-mode)
+    :config
+    (require 'shrface))
+#+end_src
+** Leetcode
+Leetcode practice in Emacs!
+#+begin_src emacs-lisp
+  (use-package leetcode
+    :config
+    (setq leetcode-prefer-language "python3"))
+  (add-to-list 'exec-path "~/.local/bin")
+#+end_src
 * OrgMode
 ** Custom Setup
 #+begin_src emacs-lisp
-    ;; Org-mode
-    (defun howard/org-mode-setup ()
-      (org-indent-mode)
-      (variable-pitch-mode 1)
-      (visual-line-mode 1))
+  ;; Org-mode
+  (defun howard/org-mode-setup ()
+    (org-indent-mode)
+    (variable-pitch-mode 1)
+    (setq-default line-spacing 2)
+    (visual-line-mode 1))
 
-    (defun howard/org-font-setup ()
-      ;; Replace list hyphen with dot
-      (font-lock-add-keywords 'org-mode
-                              '(("^ *\\([-]\\) "
-                                 (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+  (defun howard/org-font-setup ()
+    ;; Replace list hyphen with dot
+    (font-lock-add-keywords 'org-mode
+                            '(("^ *\\([-]\\) "
+                               (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
 
-      ;; Set faces for heading levels
-      (dolist (face '((org-level-1 . 1.35)
-                      (org-level-2 . 1.15)
-                      (org-level-3 . 1.1)
-                      (org-level-4 . 1.05)
-                      (org-level-5 . 1.0)
-                      (org-level-6 . 1.0)
-                      (org-level-7 . 1.0)
-                      (org-level-8 . 1.0)))
-        (set-face-attribute (car face) nil :font "Dejavu Sans Mono" :weight 'semi-bold :height (cdr face)))
+    ;; Set faces for heading levels
+    (dolist (face '((org-level-1 . 1.35)
+                    (org-level-2 . 1.15)
+                    (org-level-3 . 1.1)
+                    (org-level-4 . 1.05)
+                    (org-level-5 . 1.0)
+                    (org-level-6 . 1.0)
+                    (org-level-7 . 1.0)
+                    (org-level-8 . 1.0)))
+      (set-face-attribute (car face) nil :font "Dejavu Sans Mono" :weight 'semi-bold :height (cdr face)))
 
-      ;; Ensure that anything that should be fixed-pitch in Org files appears that way
-      (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
-      (set-face-attribute 'org-code nil   :inherit '(shadow fixed-pitch))
-      (set-face-attribute 'org-table nil   :inherit '(shadow fixed-pitch))
-      (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
-      (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
-      (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
-      (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
-      (set-face-attribute 'org-document-title nil :inherit 'variable-pitch :weight 'semi-bold :height 1.2)
-      (set-face-attribute 'org-document-info-keyword nil :inherit 'variable-pitch)
-      (set-face-attribute 'org-tag nil :inherit '(shadow fixed-pitch))
-      (set-face-attribute 'org-block-begin-line nil :inherit '(shadow fixed-pitch)))
-    (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
+    ;; Ensure that anything that should be fixed-pitch in Org files appears that way
+    (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
+    (set-face-attribute 'org-code nil   :inherit '(shadow fixed-pitch))
+    (set-face-attribute 'org-table nil   :inherit '(shadow fixed-pitch))
+    (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
+    (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+    (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+    (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
+    (set-face-attribute 'org-document-title nil :inherit 'variable-pitch :weight 'semi-bold :height 1.2)
+    (set-face-attribute 'org-document-info-keyword nil :inherit 'variable-pitch)
+    (set-face-attribute 'org-tag nil :inherit '(shadow fixed-pitch))
+    (set-face-attribute 'org-block-begin-line nil :inherit '(shadow fixed-pitch)))
+  (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
 #+end_src
 ** Org
 #+begin_src emacs-lisp
-  ;; Org Mode Config
-  (use-package org
-    :hook (org-mode . howard/org-mode-setup)
-    :config
-    (require 'org-tempo)
-    (setq org-ellipsis " ▾")
-    (howard/org-font-setup)
-    (setq org-agenda-start-with-log-mode t)
-    (setq org-log-done 'time)
-    (setq org-log-into-drawer t)
-    (setq org-agenda-window-setup 'only-window)
-    (setq org-src-window-setup 'only-window)
-    (setq org-hide-emphasis-markers t)
-    (setq org-agenda-files
-          (if howard/is-new-laptop
-              '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
-              '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
-    (setq org-todo-keywords
-        '((sequence "TODO(t)" "LATER(n)" "PROJECT(p)" "|" "DONE(d!)" "CANCELED(c)")))
-    (advice-add 'org-refile :after 'org-save-all-org-buffers)
-         (howard/org-font-setup))
-  ;; Let org-mode be evil
-  (use-package evil-org
-    :ensure t
-    :after org
-    :hook (org-mode . (lambda () evil-org-mode))
-    :config
-    (require 'evil-org-agenda)
-    (evil-org-agenda-set-keys))
+    ;; Org Mode Config
+    (use-package org
+      :hook (org-mode . howard/org-mode-setup)
+      :config
+      (require 'org-tempo)
+      (setq org-ellipsis " ▾")
+      (howard/org-font-setup)
+      (setq org-agenda-start-with-log-mode t)
+      (setq org-log-done 'time)
+      (setq org-log-into-drawer t)
+      (setq org-agenda-window-setup 'only-window)
+      (setq org-src-window-setup 'only-window)
+      (setq org-hide-emphasis-markers t)
+      (org-babel-do-load-languages
+       'org-babel-load-languages '((python . t)))
+      (setq org-agenda-files
+            (if howard/is-new-laptop
+                '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
+                '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
+      (setq org-todo-keywords
+          '((sequence "TODO(t)" "LATER(n)" "PROJECT(p)" "|" "DONE(d!)" "CANCELED(c)")))
+      (advice-add 'org-refile :after 'org-save-all-org-buffers)
+           (howard/org-font-setup))
+    ;; Let org-mode be evil
+    (use-package evil-org
+      :ensure t
+      :after org
+      :hook (org-mode . (lambda () evil-org-mode))
+      :config
+      (require 'evil-org-agenda)
+      (evil-org-agenda-set-keys))
 #+end_src
 ** Org-agenda
 We define a function that can help us refile our tasks
@@ -536,6 +570,11 @@ We define a function that can help us refile our tasks
           ))
       )
     )
+#+end_src
+** HTMLize
+Making it look better when exporing org files into =html=.
+#+begin_src emacs-lisp
+  (use-package htmlize)
 #+end_src
 ** Org Roam
 #+begin_src emacs-lisp

@@ -256,6 +256,7 @@
        "o n" '(org-narrow-to-subtree :which-key "Org Narrow to Tree")
        "o w" '(widen :which-key "Widen")
        "o r c" '(org-roam-capture :which-key "Org Roam Capture")
+       "o r f" '(org-roam-node-find :which-key "Find Org Roam file")
        "o d t" '(org-roam-dailies-goto-today :which-key "Show Dailies Today")
        "o d c" '(org-roam-dailies-capture-today :which-key "Org Dailies Capture"))
 
@@ -347,6 +348,8 @@
   (define-fringe-bitmap 'git-gutter-fr:modified [224] nil nil '(center repeated))
   (define-fringe-bitmap 'git-gutter-fr:deleted [128 192 224 240] nil nil 'bottom))
 
+(use-package pdf-tools)
+
 ;; Better config for dired
 (use-package dired
   :ensure nil
@@ -369,10 +372,31 @@
 
 (use-package writeroom-mode)
 
+(use-package shrface
+  :defer t
+  :config
+  (shrface-basic)
+  (shrface-trial)
+  (shrface-default-keybindings) ; setup default keybindings
+  (setq shrface-href-versatile t))
+
+(use-package eww
+  :defer t
+  :init
+  (add-hook 'eww-after-render-hook #'shrface-mode)
+  :config
+  (require 'shrface))
+
+(use-package leetcode
+  :config
+  (setq leetcode-prefer-language "python3"))
+(add-to-list 'exec-path "~/.local/bin")
+
 ;; Org-mode
 (defun howard/org-mode-setup ()
   (org-indent-mode)
   (variable-pitch-mode 1)
+  (setq-default line-spacing 2)
   (visual-line-mode 1))
 
 (defun howard/org-font-setup ()
@@ -419,6 +443,8 @@
   (setq org-agenda-window-setup 'only-window)
   (setq org-src-window-setup 'only-window)
   (setq org-hide-emphasis-markers t)
+  (org-babel-do-load-languages
+   'org-babel-load-languages '((python . t)))
   (setq org-agenda-files
         (if howard/is-new-laptop
             '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
@@ -461,6 +487,8 @@ is nil, refile in the current file."
         ))
     )
   )
+
+(use-package htmlize)
 
 (use-package org-roam
     :ensure t
