@@ -27,6 +27,10 @@
 (setq make-backup-files nil)    ; Don't do backups!
 (setq pop-up-windows nil)       ; Don't show popup windows
 (display-time)                  ; Show the current time in modeline
+;; Something about indenting
+(setq-default indent-tabs-mode nil)
+(setq-default tab-width 4)
+(setq indent-line-function 'insert-tab)
 
 ; A vim like scrolling expierence
 (setq scroll-margin 14)
@@ -34,7 +38,6 @@
 (setq scroll-step 1)
 (setq scroll-conservatively 101)
 
-(setq doom-themes-treemacs-enable-variable-pitch nil)
 (defun howard/setup-fonts ()
   (set-face-attribute 'default nil
     :font "Source Code Pro"
@@ -64,9 +67,9 @@
 (use-package doom-themes
   :init (load-theme 'doom-tokyo-night t)
   :config
-    (setq doom-themes-treemacs-theme "doom-colors")
-    (doom-themes-treemacs-config)
-    (doom-themes-org-config))
+  (setq doom-themes-treemacs-theme "doom-colors")
+  (doom-themes-treemacs-config)
+  (doom-themes-org-config))
 
 ; Install the icons
 (use-package all-the-icons)
@@ -75,10 +78,12 @@
 ; use doom mode line
 (use-package doom-modeline
   :ensure t
+  :config 
   :init (doom-modeline-mode 1)
   :custom ((doom-modeline-height 5)))
 
 (use-package dashboard
+  :hook (dashboard-mode . (lambda () (beacon-mode -1)))
   :init      ;; tweak dashboard config before loading it
   (setq dashboard-set-heading-icons t)
   (setq dashboard-set-file-icons t)
@@ -122,6 +127,10 @@
 
 (use-package emojify
   :hook (after-init . global-emojify-mode))
+
+(use-package beacon
+  :config
+  (beacon-mode 1))
 
 ;; Using garbage magic hack.
  (use-package gcmh
@@ -187,6 +196,7 @@
   :bind (:map evil-normal-state-map
               ("L" . 'evil-next-buffer)
               ("H" . 'evil-prev-buffer)
+              ("Q" . 'image-kill-buffer)
               ("C-j" . 'evil-window-next)
               ("C-k" . 'evil-window-prev)
           :map evil-insert-state-map
@@ -220,7 +230,7 @@
        "SPC" '(counsel-M-x :which-key "M-x"))
 ;; searching utilities
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-       "s" '(:ignore s :which-key "Search")
+       "s" '(:ignore t :which-key "Search")
        "s f" '(projectile--find-file :which-key "Search Project file")
        "s t" '(counsel-projectile-rg :which-key "Search text")
        "s c" '(counsel-load-theme :which-key "Search colorscheme")
@@ -233,21 +243,23 @@
 
 ;; Elisp evaluation
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-       "x" '(:ignore e :which-key "Elisp Eval")
+       "x" '(:ignore t :which-key "Elisp Eval")
        "x e" '(eval-expression :which-key "Eval expression")
        "x l" '(eval-last-sexp :which-key "Eval-Last-Sexp")
        "x r" '(eval-region :which-key "Eval-Region"))
 
 ;; Configuration related
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-       "c" '(:ignore c :which-key "Config")
+       "c" '(:ignore t :which-key "Config")
        "c r" '((lambda () (interactive) (load-file "~/.emacs.d/init.el")) :which-key "Reload Emacs config")
        "c e" '((lambda () (interactive) (find-file "~/.emacs.d/Emacs.org")) :which-key "Edit config file"))
 
 ;; Help system
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-       "h" '(:ignore h :which-key "help")
+       "h" '(:ignore t :which-key "help")
        "h f" '(counsel-describe-function :which-key "Describe Function")
+       "h k" '(describe-key :which-key "Describe Key")
+       "h p" '(describe-package :which-key "Describe Package")
        "h v" '(describe-variable :which-key "Describe Variable"))
 
 ;; Org mode system
@@ -278,6 +290,11 @@
        "g s" '(git-gutter:stage-hunk :which-key "Stage Hunk")
        "g u" '(git-gutter:revert-hunk :which-key "Unstage Hunk")
        "g k" '(git-gutter:previous-hunk :which-key "Prev Hunk"))
+;; terminal related
+(nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
+       "t" '(:ignore t :which-key "terminal")
+       "t v" '(vterm :which-key "Vterm")
+       "t e" '(eshell :which-key "Eshell"))
 
 ;; Install Ivy
 (use-package ivy
@@ -321,6 +338,7 @@
       ivy-posframe-height-alist '((t . 10))
       ivy-posframe-parameters '((:internal-border-width . 5)
                                 (:internal-border-color . "white")))
+  (setq ivy-posframe-width 100)
       (ivy-posframe-mode 1))
 
 ; Make posframe respect original theme
@@ -352,20 +370,37 @@
   (define-fringe-bitmap 'git-gutter-fr:modified [224] nil nil '(center repeated))
   (define-fringe-bitmap 'git-gutter-fr:deleted [128 192 224 240] nil nil 'bottom))
 
+(use-package calfw
+  :commands cfw:open-org-calendar
+  :config
+  (setq cfw:fchar-junction ?╋
+        cfw:fchar-vertical-line ?┃
+        cfw:fchar-horizontal-line ?━
+        cfw:fchar-left-junction ?┣
+        cfw:fchar-right-junction ?┫
+        cfw:fchar-top-junction ?┯
+        cfw:fchar-top-left-corner ?┏
+        cfw:fchar-top-right-corner ?┓))
+
+(use-package calfw-org
+  :config
+  (setq cfw:org-agenda-schedule-args '(:timestamp)))
+
 (use-package pdf-tools)
 
 ;; Better config for dired
 (use-package dired
   :ensure nil
   :commands (dired dired-jump)
+  :custom ((dired-listing-switches "-agho --group-directories-first"))
   :config
   (evil-collection-define-key 'normal 'dired-mode-map
     "h" 'dired-up-directory
-    "l" 'dired-find-file))
-(use-package ranger
-  :config
-  (setq ranger-preview-file t)
-  (ranger-override-dired-mode t))
+    "l" 'dired-find-alternate-file))
+(use-package all-the-icons-dired
+  :hook (dired-mode . all-the-icons-dired-mode)
+  :init
+  (setq all-the-icons-dired-monochrome nil))
 
 ;; Project management
 (use-package rg) ; searching for text in project
@@ -396,12 +431,22 @@
   (setq leetcode-prefer-language "python3"))
 (add-to-list 'exec-path "~/.local/bin")
 
+(use-package go-translate
+  :config
+  (setq gts-translate-list '(("en" "zh") ("zh" "en")))
+  (setq get-default-translator
+        (gts-translator
+         :picker (gts-prompt-picker)
+         :engines (list (gts-google-engine))
+         :render (gts-buffer-render))))
+
 ;; Org-mode
 (defun howard/org-mode-setup ()
   (org-indent-mode)
   (variable-pitch-mode 1)
   (setq-default line-spacing 2)
-  (visual-line-mode 1))
+  (visual-line-mode 1)
+  (electric-pair-mode -1))
 
 (defun howard/org-font-setup ()
   ;; Replace list hyphen with dot
@@ -435,29 +480,59 @@
 (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
 
 ;; Org Mode Config
+(defun display-ansi-colors ()
+  (ansi-color-apply-on-region (point-min) (point-max)))
+(add-hook 'org-babel-after-execute-hook #'display-ansi-colors)
+(use-package org-super-agenda
+  :after org
+  :config
+  (setq org-super-agenda-header-map (make-sparse-keymap)))
+
 (use-package org
-  :hook (org-mode . howard/org-mode-setup)
+  :hook
+  (org-mode . howard/org-mode-setup)
+  (org-mode . flyspell-mode)
   :config
   (require 'org-tempo)
   (setq org-ellipsis " ▾")
   (howard/org-font-setup)
   (setq org-agenda-start-with-log-mode t)
+  (advice-add 'org-agenda-goto :after
+              (lambda (&rest args)
+                (org-narrow-to-subtree)))
   (setq org-log-done 'time)
   (setq org-log-into-drawer t)
   (setq org-agenda-window-setup 'only-window)
   (setq org-src-window-setup 'only-window)
   (setq org-hide-emphasis-markers t)
+  (setq org-confirm-babel-evaluate nil)
+  (setq org-latex-pdf-process '("xelatex -interaction nonstopmode %f"
+                            "xelatex -interaction nonstopmode %f"))
   (plist-put org-format-latex-options :scale 1.5)
   (org-babel-do-load-languages
-   'org-babel-load-languages '((python . t)))
+   'org-babel-load-languages
+   '((python . t)
+     (shell . t)
+     (latex . t)
+     (C . t)
+     (jupyter . t)))          ; must be last
   (setq org-agenda-files
         (if howard/is-new-laptop
             '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
-            '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
+          '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
   (setq org-todo-keywords
-      '((sequence "TODO(t)" "LATER(n)" "PROJECT(p)" "|" "DONE(d!)" "CANCELED(c)")))
+        '((sequence "TODO(t)" "LATER(n)" "|" "DONE(d!)" "CANCELED(c)")))
   (advice-add 'org-refile :after 'org-save-all-org-buffers)
-       (howard/org-font-setup))
+  (howard/org-font-setup)
+  (setq org-agenda-custom-commands
+        '(("d" "Daily Agenda"
+          ((agenda "" (
+                       (org-agenda-span 1)
+                       (org-deadline-warning-days 1)
+                       (org-agenda-overriding-header "📆 Todays Agenda")))
+           (tags-todo "Projects" ((org-agenda-overriding-header "📖 Projects")
+                    (org-super-agenda-groups
+                     '((:auto-group t))))))))))
 ;; Let org-mode be evil
 (use-package evil-org
   :ensure t
@@ -548,9 +623,9 @@ is nil, refile in the current file."
 
 (defun howard/org-babel-tangle-config()
   (when (string-equal (buffer-file-name)
-		      (expand-file-name "~/.emacs.d/Emacs.org"))
+		  (expand-file-name "~/.emacs.d/Emacs.org"))
     (let ((org-confirm-babel-evaluate nil))
-      (org-babel-tangle))))
+  (org-babel-tangle))))
 (add-hook 'after-save-hook #'howard/org-babel-tangle-config)
 ;; (org-babel-load-file
 ;;   (expand-file-name
@@ -585,7 +660,6 @@ is nil, refile in the current file."
   :config
   (add-hook 'java-mode-hook 'lsp))
 
-
 (use-package lsp-pyright
   :ensure t
   :hook (python-mode . (lambda ()
@@ -593,13 +667,15 @@ is nil, refile in the current file."
                         (lsp))))  ; or lsp-deferred
 ; python
 (require 'dap-python)
+(use-package jupyter
+  :init (org-babel-jupyter-aliases-from-kernelspecs))
 ;; lua
 (use-package lua-mode
   :hook (lua-mode . electric-pair-mode))
 (use-package markdown-mode
   :custom (markdown-command "/usr/sbin/pandoc"))
-; emacs-lisp mode
-(add-hook 'emacs-lisp-mode-hook 'electric-pair-mode)
+;; add electric mode to all programing mode
+(add-hook 'prog-mode-hook 'electric-pair-mode)
 
 ;; completion framework
 (use-package company
@@ -629,7 +705,19 @@ is nil, refile in the current file."
   :config
   (eshell-syntax-highlighting-global-mode +1))
 ;; Add conda to eshell
-(use-package conda)
-(conda-env-initialize-eshell)
-(custom-set-variables
- '(conda-anaconda-home "~/.local/bin/miniconda3"))
+(use-package conda
+  :config
+  (conda-env-initialize-eshell)
+  (setq conda-env-home-directory (expand-file-name "~/.conda"))
+  :custom
+  (conda-anaconda-home "/opt/miniconda3"))
+
+(use-package emms
+  :commands emms
+  :config
+  (require 'emms-setup)
+  (emms-standard)
+  (emms-default-players)
+  (emms-mode-line-disable)
+  (setq emms-source-file-default-directory "~/Music/"))
+(put 'dired-find-alternate-file 'disabled nil)

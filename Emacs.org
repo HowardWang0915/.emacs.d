@@ -40,6 +40,10 @@ In this section, we want to disable a lot of things that comes out out of the bo
   (setq make-backup-files nil)    ; Don't do backups!
   (setq pop-up-windows nil)       ; Don't show popup windows
   (display-time)                  ; Show the current time in modeline
+  ;; Something about indenting
+  (setq-default indent-tabs-mode nil)
+  (setq-default tab-width 4)
+  (setq indent-line-function 'insert-tab)
 #+end_src
 ** Scrolling
 The default scrolling in emacs sucks.
@@ -51,9 +55,8 @@ The default scrolling in emacs sucks.
   (setq scroll-conservatively 101)
 #+end_src
 ** Fonts
-Below we define our fonts for emacs.
+Below we setup custom functions to setup the fonts.
 #+begin_src emacs-lisp
-  (setq doom-themes-treemacs-enable-variable-pitch nil)
   (defun howard/setup-fonts ()
     (set-face-attribute 'default nil
       :font "Source Code Pro"
@@ -85,9 +88,9 @@ Below we define our fonts for emacs.
   (use-package doom-themes
     :init (load-theme 'doom-tokyo-night t)
     :config
-      (setq doom-themes-treemacs-theme "doom-colors")
-      (doom-themes-treemacs-config)
-      (doom-themes-org-config))
+    (setq doom-themes-treemacs-theme "doom-colors")
+    (doom-themes-treemacs-config)
+    (doom-themes-org-config))
 
   ; Install the icons
   (use-package all-the-icons)
@@ -96,12 +99,14 @@ Below we define our fonts for emacs.
   ; use doom mode line
   (use-package doom-modeline
     :ensure t
+    :config 
     :init (doom-modeline-mode 1)
     :custom ((doom-modeline-height 5)))
 #+end_src
 ** Dashboards
 #+begin_src emacs-lisp
   (use-package dashboard
+    :hook (dashboard-mode . (lambda () (beacon-mode -1)))
     :init      ;; tweak dashboard config before loading it
     (setq dashboard-set-heading-icons t)
     (setq dashboard-set-file-icons t)
@@ -156,6 +161,13 @@ Turn on the line numbers. Also, disable line numbers for some modes
 #+begin_src emacs-lisp
   (use-package emojify
     :hook (after-init . global-emojify-mode))
+#+end_src
+** Beacon
+Never loose your cursor again!
+#+begin_src emacs-lisp
+  (use-package beacon
+    :config
+    (beacon-mode 1))
 #+end_src
 * Optimization
 ** Garbage cleaning
@@ -235,6 +247,7 @@ Turn on the line numbers. Also, disable line numbers for some modes
     :bind (:map evil-normal-state-map
                 ("L" . 'evil-next-buffer)
                 ("H" . 'evil-prev-buffer)
+                ("Q" . 'image-kill-buffer)
                 ("C-j" . 'evil-window-next)
                 ("C-k" . 'evil-window-prev)
             :map evil-insert-state-map
@@ -270,7 +283,7 @@ Turn on the line numbers. Also, disable line numbers for some modes
          "SPC" '(counsel-M-x :which-key "M-x"))
   ;; searching utilities
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-         "s" '(:ignore s :which-key "Search")
+         "s" '(:ignore t :which-key "Search")
          "s f" '(projectile--find-file :which-key "Search Project file")
          "s t" '(counsel-projectile-rg :which-key "Search text")
          "s c" '(counsel-load-theme :which-key "Search colorscheme")
@@ -283,21 +296,23 @@ Turn on the line numbers. Also, disable line numbers for some modes
 
   ;; Elisp evaluation
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-         "x" '(:ignore e :which-key "Elisp Eval")
+         "x" '(:ignore t :which-key "Elisp Eval")
          "x e" '(eval-expression :which-key "Eval expression")
          "x l" '(eval-last-sexp :which-key "Eval-Last-Sexp")
          "x r" '(eval-region :which-key "Eval-Region"))
 
   ;; Configuration related
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-         "c" '(:ignore c :which-key "Config")
+         "c" '(:ignore t :which-key "Config")
          "c r" '((lambda () (interactive) (load-file "~/.emacs.d/init.el")) :which-key "Reload Emacs config")
          "c e" '((lambda () (interactive) (find-file "~/.emacs.d/Emacs.org")) :which-key "Edit config file"))
 
   ;; Help system
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-         "h" '(:ignore h :which-key "help")
+         "h" '(:ignore t :which-key "help")
          "h f" '(counsel-describe-function :which-key "Describe Function")
+         "h k" '(describe-key :which-key "Describe Key")
+         "h p" '(describe-package :which-key "Describe Package")
          "h v" '(describe-variable :which-key "Describe Variable"))
 
   ;; Org mode system
@@ -328,8 +343,14 @@ Turn on the line numbers. Also, disable line numbers for some modes
          "g s" '(git-gutter:stage-hunk :which-key "Stage Hunk")
          "g u" '(git-gutter:revert-hunk :which-key "Unstage Hunk")
          "g k" '(git-gutter:previous-hunk :which-key "Prev Hunk"))
+  ;; terminal related
+  (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
+         "t" '(:ignore t :which-key "terminal")
+         "t v" '(vterm :which-key "Vterm")
+         "t e" '(eshell :which-key "Eshell"))
 #+end_src
 * Completion Framework
+
 Using Ivy and Counsel
 #+begin_src emacs-lisp
   ;; Install Ivy
@@ -374,6 +395,7 @@ Using Ivy and Counsel
         ivy-posframe-height-alist '((t . 10))
         ivy-posframe-parameters '((:internal-border-width . 5)
                                   (:internal-border-color . "white")))
+    (setq ivy-posframe-width 100)
         (ivy-posframe-mode 1))
 
   ; Make posframe respect original theme
@@ -396,7 +418,7 @@ Using Ivy and Counsel
     :custom
     (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
 #+end_src
-*** Gitgutter
+*** Git-Gutter
 #+begin_src emacs-lisp
     ; Magit Installation
     (use-package git-gutter
@@ -411,6 +433,26 @@ Using Ivy and Counsel
     (define-fringe-bitmap 'git-gutter-fr:modified [224] nil nil '(center repeated))
     (define-fringe-bitmap 'git-gutter-fr:deleted [128 192 224 240] nil nil 'bottom))
 #+end_src
+** Calendar
+*** Calfw
+    A beautiful calendar displayed natively in Emacs.
+#+begin_src emacs-lisp    
+  (use-package calfw
+    :commands cfw:open-org-calendar
+    :config
+    (setq cfw:fchar-junction ?╋
+          cfw:fchar-vertical-line ?┃
+          cfw:fchar-horizontal-line ?━
+          cfw:fchar-left-junction ?┣
+          cfw:fchar-right-junction ?┫
+          cfw:fchar-top-junction ?┯
+          cfw:fchar-top-left-corner ?┏
+          cfw:fchar-top-right-corner ?┓))
+
+  (use-package calfw-org
+    :config
+    (setq cfw:org-agenda-schedule-args '(:timestamp)))
+#+end_src   
 ** Pdf-tool
 #+begin_src emacs-lisp
   (use-package pdf-tools)
@@ -421,15 +463,15 @@ Using Ivy and Counsel
   (use-package dired
     :ensure nil
     :commands (dired dired-jump)
+    :custom ((dired-listing-switches "-agho --group-directories-first"))
     :config
     (evil-collection-define-key 'normal 'dired-mode-map
       "h" 'dired-up-directory
-      "l" 'dired-find-file))
-  (use-package ranger
-    :config
-    (setq ranger-preview-file t)
-    (ranger-override-dired-mode t))
-
+      "l" 'dired-find-alternate-file))
+  (use-package all-the-icons-dired
+    :hook (dired-mode . all-the-icons-dired-mode)
+    :init
+    (setq all-the-icons-dired-monochrome nil))
 #+end_src
 ** Projectile
 #+begin_src emacs-lisp
@@ -471,6 +513,18 @@ Leetcode practice in Emacs!
     (setq leetcode-prefer-language "python3"))
   (add-to-list 'exec-path "~/.local/bin")
 #+end_src
+** Translator in emacs
+#+begin_src emacs-lisp
+  (use-package go-translate
+    :config
+    (setq gts-translate-list '(("en" "zh") ("zh" "en")))
+    (setq get-default-translator
+          (gts-translator
+           :picker (gts-prompt-picker)
+           :engines (list (gts-google-engine))
+           :render (gts-buffer-render))))
+
+#+end_src
 * OrgMode
 ** Custom Setup
 #+begin_src emacs-lisp
@@ -479,7 +533,8 @@ Leetcode practice in Emacs!
     (org-indent-mode)
     (variable-pitch-mode 1)
     (setq-default line-spacing 2)
-    (visual-line-mode 1))
+    (visual-line-mode 1)
+    (electric-pair-mode -1))
 
   (defun howard/org-font-setup ()
     ;; Replace list hyphen with dot
@@ -513,39 +568,70 @@ Leetcode practice in Emacs!
   (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
 #+end_src
 ** Org
+This section contains the settings for org-mode
 #+begin_src emacs-lisp
-  ;; Org Mode Config
-  (use-package org
-    :hook (org-mode . howard/org-mode-setup)
-    :config
-    (require 'org-tempo)
-    (setq org-ellipsis " ▾")
-    (howard/org-font-setup)
-    (setq org-agenda-start-with-log-mode t)
-    (setq org-log-done 'time)
-    (setq org-log-into-drawer t)
-    (setq org-agenda-window-setup 'only-window)
-    (setq org-src-window-setup 'only-window)
-    (setq org-hide-emphasis-markers t)
-    (plist-put org-format-latex-options :scale 1.5)
-    (org-babel-do-load-languages
-     'org-babel-load-languages '((python . t)))
-    (setq org-agenda-files
-          (if howard/is-new-laptop
-              '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
+    ;; Org Mode Config
+    (defun display-ansi-colors ()
+      (ansi-color-apply-on-region (point-min) (point-max)))
+    (add-hook 'org-babel-after-execute-hook #'display-ansi-colors)
+    (use-package org-super-agenda
+      :after org
+      :config
+      (setq org-super-agenda-header-map (make-sparse-keymap)))
+
+    (use-package org
+      :hook
+      (org-mode . howard/org-mode-setup)
+      (org-mode . flyspell-mode)
+      :config
+      (require 'org-tempo)
+      (setq org-ellipsis " ▾")
+      (howard/org-font-setup)
+      (setq org-agenda-start-with-log-mode t)
+      (advice-add 'org-agenda-goto :after
+                  (lambda (&rest args)
+                    (org-narrow-to-subtree)))
+      (setq org-log-done 'time)
+      (setq org-log-into-drawer t)
+      (setq org-agenda-window-setup 'only-window)
+      (setq org-src-window-setup 'only-window)
+      (setq org-hide-emphasis-markers t)
+      (setq org-confirm-babel-evaluate nil)
+      (setq org-latex-pdf-process '("xelatex -interaction nonstopmode %f"
+                                "xelatex -interaction nonstopmode %f"))
+      (plist-put org-format-latex-options :scale 1.5)
+      (org-babel-do-load-languages
+       'org-babel-load-languages
+       '((python . t)
+         (shell . t)
+         (latex . t)
+         (C . t)
+         (jupyter . t)))          ; must be last
+      (setq org-agenda-files
+            (if howard/is-new-laptop
+                '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
               '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
-    (setq org-todo-keywords
-        '((sequence "TODO(t)" "LATER(n)" "PROJECT(p)" "|" "DONE(d!)" "CANCELED(c)")))
-    (advice-add 'org-refile :after 'org-save-all-org-buffers)
-         (howard/org-font-setup))
-  ;; Let org-mode be evil
-  (use-package evil-org
-    :ensure t
-    :after org
-    :hook (org-mode . (lambda () evil-org-mode))
-    :config
-    (require 'evil-org-agenda)
-    (evil-org-agenda-set-keys))
+      (setq org-todo-keywords
+            '((sequence "TODO(t)" "LATER(n)" "|" "DONE(d!)" "CANCELED(c)")))
+      (advice-add 'org-refile :after 'org-save-all-org-buffers)
+      (howard/org-font-setup)
+      (setq org-agenda-custom-commands
+            '(("d" "Daily Agenda"
+              ((agenda "" (
+                           (org-agenda-span 1)
+                           (org-deadline-warning-days 1)
+                           (org-agenda-overriding-header "📆 Todays Agenda")))
+               (tags-todo "Projects" ((org-agenda-overriding-header "📖 Projects")
+                        (org-super-agenda-groups
+                         '((:auto-group t))))))))))
+    ;; Let org-mode be evil
+    (use-package evil-org
+      :ensure t
+      :after org
+      :hook (org-mode . (lambda () evil-org-mode))
+      :config
+      (require 'evil-org-agenda)
+      (evil-org-agenda-set-keys))
 #+end_src
 ** Org-agenda
 We define a function that can help us refile our tasks
@@ -641,6 +727,7 @@ Making it look better when exporing org files into =html=.
     :hook (org-mode . howard/org-mode-visual-fill))
 #+end_src
 ** Auto-Tangling
+TODO: This has to be changed
 #+begin_src emacs-lisp
   (defun howard/org-babel-tangle-config()
     (when (string-equal (buffer-file-name)
@@ -691,7 +778,6 @@ In this section, we will configure for different language settings
     :config
     (add-hook 'java-mode-hook 'lsp))
 
-
   (use-package lsp-pyright
     :ensure t
     :hook (python-mode . (lambda ()
@@ -699,13 +785,15 @@ In this section, we will configure for different language settings
                           (lsp))))  ; or lsp-deferred
   ; python
   (require 'dap-python)
+  (use-package jupyter
+    :init (org-babel-jupyter-aliases-from-kernelspecs))
   ;; lua
   (use-package lua-mode
     :hook (lua-mode . electric-pair-mode))
   (use-package markdown-mode
     :custom (markdown-command "/usr/sbin/pandoc"))
-  ; emacs-lisp mode
-  (add-hook 'emacs-lisp-mode-hook 'electric-pair-mode)
+  ;; add electric mode to all programing mode
+  (add-hook 'prog-mode-hook 'electric-pair-mode)
 #+end_src
 ** Completion Framework
 #+begin_src emacs-lisp
@@ -745,8 +833,23 @@ Provides better Code highlighting
     :config
     (eshell-syntax-highlighting-global-mode +1))
   ;; Add conda to eshell
-  (use-package conda)
-  (conda-env-initialize-eshell)
-  (custom-set-variables
-   '(conda-anaconda-home "~/.local/bin/miniconda3"))
+  (use-package conda
+    :config
+    (conda-env-initialize-eshell)
+    (setq conda-env-home-directory (expand-file-name "~/.conda"))
+    :custom
+    (conda-anaconda-home "/opt/miniconda3"))
+#+end_src
+*** 
+* Media system
+** Music
+#+begin_src emacs-lisp
+(use-package emms
+  :commands emms
+  :config
+  (require 'emms-setup)
+  (emms-standard)
+  (emms-default-players)
+  (emms-mode-line-disable)
+  (setq emms-source-file-default-directory "~/Music/"))
 #+end_src
