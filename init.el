@@ -271,6 +271,7 @@
        "o s" '(org-schedule :which-key "Org Schedule")
        "o n" '(org-narrow-to-subtree :which-key "Org Narrow to Tree")
        "o w" '(widen :which-key "Widen")
+       "o c" '(org-capture :which-key "Org Capture")
        "o r c" '(org-roam-capture :which-key "Org Roam Capture")
        "o r f" '(org-roam-node-find :which-key "Find Org Roam file")
        "o d t" '(org-roam-dailies-goto-today :which-key "Show Dailies Today")
@@ -479,10 +480,95 @@
   (set-face-attribute 'org-block-begin-line nil :inherit '(shadow fixed-pitch)))
 (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
 
+(defun howard/org-refile-to-datetree (&optional file)
+  "Refile a subtree to a datetree corresponding to it's timestamp.
+
+The current time is used if the entry has no timestamp. If FILE
+is nil, refile in the current file."
+  (interactive "f")
+  (let* ((datetree-date (or (org-entry-get nil "TIMESTAMP" t)
+                            (org-read-date t nil "now")))
+         (date (org-date-to-gregorian datetree-date))
+         )
+    (with-current-buffer (current-buffer)
+      (save-excursion
+        (org-cut-subtree)
+        (if file (find-file file))
+        (org-datetree-find-date-create date)
+        (org-narrow-to-subtree)
+        (show-subtree)
+        (org-end-of-subtree t)
+        (newline)
+        (goto-char (point-max))
+        (org-paste-subtree 4)
+        (widen)
+        ))
+    )
+  )
+(defun howard/is-project-p ()
+  "A task with a 'PROJ' keyword"
+  (member (nth 2 (org-heading-components)) '("PROJ")))
+
+(defun howard/select-with-tag-function (select-fun-p)
+  (save-restriction
+    (widen)
+    (let ((next-headline
+       (save-excursion (or (outline-next-heading)
+                   (point-max)))))
+      (if (funcall select-fun-p) nil next-headline))))
+
+(defun howard/select-projects ()
+  "Selects tasks which are project headers"
+  (howard/select-with-tag-function #'howard/is-project-p))
+
+(defvar howard-org-agenda-block--today-schedule
+  '(agenda "" ((org-agenda-overriding-header "🗓 Today's Schedule:")
+           (org-agenda-span 'day)
+           (org-agenda-ndays 1)
+           (org-deadline-warning-days 1)
+           (org-agenda-start-on-weekday nil)
+           (org-agenda-start-day "+0d")))
+  "A block showing a 1 day schedule.")
+
+(defvar howard-org-agenda-block--weekly-log
+  '(agenda "" ((org-agenda-overriding-header "📅 Weekly Log")
+               (org-agenda-span 'week)
+               (org-agenda-start-day "+1d")))
+  "A block showing my schedule and logged tasks for this week.")
+
+(defvar howard-org-agenda-block--three-days-sneak-peek
+  '(agenda "" ((org-agenda-overriding-header "3⃣ Next Three Days")
+               (org-agenda-start-on-weekday nil)
+               (org-agenda-start-day "+1d")
+               (org-agenda-span 3)))
+  "A block showing what to do for the next three days. ")
+
+(defvar howard-org-agenda-block--active-projects
+  '(tags-todo "-INACTIVE-LATER-CANCELLED-REFILEr/!"
+          ((org-agenda-overriding-header "📚 Active Projects:")
+           (org-agenda-skip-function 'howard/select-projects)))
+  "All active projects: no inactive/someday/cancelled/refile.")
+
+(defvar howard-org-agenda-block--next-tasks
+  '(tags-todo "-INACTIVE-LATER-CANCELLED-ARCHIVE/!NEXT"
+          ((org-agenda-overriding-header "Next Tasks:")
+           ))
+  "Next tasks.")
+(defvar howard-org-agenda-display-settings
+  '((org-agenda-start-with-log-mode t)
+    (org-agenda-log-mode-items '(clock))
+    (org-agenda-prefix-format '((agenda . "  %-12:c%?-12t %(gs/org-agenda-add-location-string)% s")
+                (timeline . "  % s")
+                (todo . "  %-12:c %(gs/org-agenda-prefix-string) ")
+                (tags . "  %-12:c %(gs/org-agenda-prefix-string) ")
+                (search . "  %i %-12:c"))))
+  "Display settings for my agenda views.")
+
 ;; Org Mode Config
 (defun display-ansi-colors ()
   (ansi-color-apply-on-region (point-min) (point-max)))
 (add-hook 'org-babel-after-execute-hook #'display-ansi-colors)
+
 (use-package org-super-agenda
   :after org
   :config
@@ -519,20 +605,31 @@
   (setq org-agenda-files
         (if howard/is-new-laptop
             '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
-          '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
+          '("~/Documents/Org-Files/Tasks/Tasks.org" "~/Documents/Org-Files/Tasks/Archive.org")))
+  (setq org-capture-templates
+        '(("t" "Task" entry (file+headline "~/Documents/Org-Files/Tasks/Tasks.org" "Tasks")
+           "* %^{Select your option|TODO|LATER|} %?\n SCHEDULED: %^T")
+          ("p" "Project" entry (file+headline "~/Documents/Org-Files/Tasks/Tasks.org" "Projects")
+                                            "* PROJ %?")))
   (setq org-todo-keywords
-        '((sequence "TODO(t)" "LATER(n)" "|" "DONE(d!)" "CANCELED(c)")))
+        '((sequence "TODO(t)" "NEXT(n)" "PROJ(p)" "|" "DONE(d!)")
+          (sequence "WAITING(w@/!)" "INACTIVE(i)" "LATER(l)" "|" "CANCELED(c@/!)")))
   (advice-add 'org-refile :after 'org-save-all-org-buffers)
   (howard/org-font-setup)
   (setq org-agenda-custom-commands
-        '(("d" "Daily Agenda"
+        `(("d" "Daily Agenda"
           ((agenda "" (
-                       (org-agenda-span 1)
+                       (org-agenda-span 3)
                        (org-deadline-warning-days 1)
                        (org-agenda-overriding-header "📆 Todays Agenda")))
            (tags-todo "Projects" ((org-agenda-overriding-header "📖 Projects")
                     (org-super-agenda-groups
-                     '((:auto-group t))))))))))
+                     '((:auto-group t)))))))
+          ("T" "Test Agenda"
+           (,howard-org-agenda-block--today-schedule
+            ,howard-org-agenda-block--active-projects
+            ,howard-org-agenda-block--three-days-sneak-peek
+            ,howard-org-agenda-block--next-tasks)))))
 ;; Let org-mode be evil
 (use-package evil-org
   :ensure t
@@ -541,32 +638,6 @@
   :config
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
-
-(defun howard/org-refile-to-datetree (&optional file)
-  "Refile a subtree to a datetree corresponding to it's timestamp.
-
-The current time is used if the entry has no timestamp. If FILE
-is nil, refile in the current file."
-  (interactive "f")
-  (let* ((datetree-date (or (org-entry-get nil "TIMESTAMP" t)
-                            (org-read-date t nil "now")))
-         (date (org-date-to-gregorian datetree-date))
-         )
-    (with-current-buffer (current-buffer)
-      (save-excursion
-        (org-cut-subtree)
-        (if file (find-file file))
-        (org-datetree-find-date-create date)
-        (org-narrow-to-subtree)
-        (show-subtree)
-        (org-end-of-subtree t)
-        (newline)
-        (goto-char (point-max))
-        (org-paste-subtree 4)
-        (widen)
-        ))
-    )
-  )
 
 (use-package htmlize)
 
@@ -591,14 +662,6 @@ is nil, refile in the current file."
     '(("d" "default" entry "* %?"
         :target (file+head "%<%Y-%m-%d>.org"
                             "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))
-    ("t" "Task" entry "* %^{Select your option|TODO|LATER|} %?\n SCHEDULED: %^T" 
-        :target (file+head+olp "Tasks.org"
-                            "#+title: Tasks and Ideas"
-                            ("Tasks")))
-    ("p" "Project" entry "* PROJECT %?" 
-        :target (file+head+olp "Tasks.org"
-                            "#+title: Tasks and Ideas"
-                            ("Projects")))
     ("j" "journal" entry
         "* %<%I:%M %p> - Journal  :journal:\n\n%?\n\n"
         :target (file+head "%<%Y-%m-%d>.org"
@@ -621,16 +684,9 @@ is nil, refile in the current file."
 (use-package visual-fill-column
   :hook (org-mode . howard/org-mode-visual-fill))
 
-(defun howard/org-babel-tangle-config()
-  (when (string-equal (buffer-file-name)
-		  (expand-file-name "~/.emacs.d/Emacs.org"))
-    (let ((org-confirm-babel-evaluate nil))
-  (org-babel-tangle))))
-(add-hook 'after-save-hook #'howard/org-babel-tangle-config)
-;; (org-babel-load-file
-;;   (expand-file-name
-;;    "Emacs.org"
-;;    user-emacs-directory))
+(use-package org-auto-tangle
+  :defer t
+  :hook (org-mode . org-auto-tangle-mode))
 
 (use-package lsp-mode
   :hook
@@ -667,6 +723,7 @@ is nil, refile in the current file."
                         (lsp))))  ; or lsp-deferred
 ; python
 (require 'dap-python)
+
 (use-package jupyter
   :init (org-babel-jupyter-aliases-from-kernelspecs))
 ;; lua
@@ -719,5 +776,6 @@ is nil, refile in the current file."
   (emms-standard)
   (emms-default-players)
   (emms-mode-line-disable)
+  (setq emms-info-functions '(emms-info-exiftool))
+  (setq emms-browser-covers 'emms-browser-cache-thumbnail-async)
   (setq emms-source-file-default-directory "~/Music/"))
-(put 'dired-find-alternate-file 'disabled nil)

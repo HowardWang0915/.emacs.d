@@ -1,4 +1,5 @@
 #+title: Emacs Configuration
+#+auto_tangle: t
 #+PROPERTY: header-args:emacs-lisp :tangle ./init.el
 
 * Package Management
@@ -272,6 +273,7 @@ Never loose your cursor again!
     (global-undo-tree-mode 1))
 #+end_src
 ** General Package
+    In this block, we define keymaps so they are consistent with Space Vim
 #+begin_src emacs-lisp
   (use-package general
     :config
@@ -324,6 +326,7 @@ Never loose your cursor again!
          "o s" '(org-schedule :which-key "Org Schedule")
          "o n" '(org-narrow-to-subtree :which-key "Org Narrow to Tree")
          "o w" '(widen :which-key "Widen")
+         "o c" '(org-capture :which-key "Org Capture")
          "o r c" '(org-roam-capture :which-key "Org Roam Capture")
          "o r f" '(org-roam-node-find :which-key "Find Org Roam file")
          "o d t" '(org-roam-dailies-goto-today :which-key "Show Dailies Today")
@@ -567,74 +570,8 @@ Leetcode practice in Emacs!
     (set-face-attribute 'org-block-begin-line nil :inherit '(shadow fixed-pitch)))
   (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
 #+end_src
-** Org
-This section contains the settings for org-mode
-#+begin_src emacs-lisp
-    ;; Org Mode Config
-    (defun display-ansi-colors ()
-      (ansi-color-apply-on-region (point-min) (point-max)))
-    (add-hook 'org-babel-after-execute-hook #'display-ansi-colors)
-    (use-package org-super-agenda
-      :after org
-      :config
-      (setq org-super-agenda-header-map (make-sparse-keymap)))
-
-    (use-package org
-      :hook
-      (org-mode . howard/org-mode-setup)
-      (org-mode . flyspell-mode)
-      :config
-      (require 'org-tempo)
-      (setq org-ellipsis " ▾")
-      (howard/org-font-setup)
-      (setq org-agenda-start-with-log-mode t)
-      (advice-add 'org-agenda-goto :after
-                  (lambda (&rest args)
-                    (org-narrow-to-subtree)))
-      (setq org-log-done 'time)
-      (setq org-log-into-drawer t)
-      (setq org-agenda-window-setup 'only-window)
-      (setq org-src-window-setup 'only-window)
-      (setq org-hide-emphasis-markers t)
-      (setq org-confirm-babel-evaluate nil)
-      (setq org-latex-pdf-process '("xelatex -interaction nonstopmode %f"
-                                "xelatex -interaction nonstopmode %f"))
-      (plist-put org-format-latex-options :scale 1.5)
-      (org-babel-do-load-languages
-       'org-babel-load-languages
-       '((python . t)
-         (shell . t)
-         (latex . t)
-         (C . t)
-         (jupyter . t)))          ; must be last
-      (setq org-agenda-files
-            (if howard/is-new-laptop
-                '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
-              '("~/Documents/Org-Files/OrgRoam/journal/Tasks.org")))
-      (setq org-todo-keywords
-            '((sequence "TODO(t)" "LATER(n)" "|" "DONE(d!)" "CANCELED(c)")))
-      (advice-add 'org-refile :after 'org-save-all-org-buffers)
-      (howard/org-font-setup)
-      (setq org-agenda-custom-commands
-            '(("d" "Daily Agenda"
-              ((agenda "" (
-                           (org-agenda-span 1)
-                           (org-deadline-warning-days 1)
-                           (org-agenda-overriding-header "📆 Todays Agenda")))
-               (tags-todo "Projects" ((org-agenda-overriding-header "📖 Projects")
-                        (org-super-agenda-groups
-                         '((:auto-group t))))))))))
-    ;; Let org-mode be evil
-    (use-package evil-org
-      :ensure t
-      :after org
-      :hook (org-mode . (lambda () evil-org-mode))
-      :config
-      (require 'evil-org-agenda)
-      (evil-org-agenda-set-keys))
-#+end_src
-** Org-agenda
-We define a function that can help us refile our tasks
+** Org-agenda helper functions
+Before using the package of org, we define several helper functions and variables to help out the process.
 #+begin_src emacs-lisp
   (defun howard/org-refile-to-datetree (&optional file)
     "Refile a subtree to a datetree corresponding to it's timestamp.
@@ -661,6 +598,142 @@ We define a function that can help us refile our tasks
           ))
       )
     )
+  (defun howard/is-project-p ()
+    "A task with a 'PROJ' keyword"
+    (member (nth 2 (org-heading-components)) '("PROJ")))
+
+  (defun howard/select-with-tag-function (select-fun-p)
+    (save-restriction
+      (widen)
+      (let ((next-headline
+         (save-excursion (or (outline-next-heading)
+                     (point-max)))))
+        (if (funcall select-fun-p) nil next-headline))))
+
+  (defun howard/select-projects ()
+    "Selects tasks which are project headers"
+    (howard/select-with-tag-function #'howard/is-project-p))
+
+  (defvar howard-org-agenda-block--today-schedule
+    '(agenda "" ((org-agenda-overriding-header "🗓 Today's Schedule:")
+             (org-agenda-span 'day)
+             (org-agenda-ndays 1)
+             (org-deadline-warning-days 1)
+             (org-agenda-start-on-weekday nil)
+             (org-agenda-start-day "+0d")))
+    "A block showing a 1 day schedule.")
+
+  (defvar howard-org-agenda-block--weekly-log
+    '(agenda "" ((org-agenda-overriding-header "📅 Weekly Log")
+                 (org-agenda-span 'week)
+                 (org-agenda-start-day "+1d")))
+    "A block showing my schedule and logged tasks for this week.")
+
+  (defvar howard-org-agenda-block--three-days-sneak-peek
+    '(agenda "" ((org-agenda-overriding-header "3⃣ Next Three Days")
+                 (org-agenda-start-on-weekday nil)
+                 (org-agenda-start-day "+1d")
+                 (org-agenda-span 3)))
+    "A block showing what to do for the next three days. ")
+
+  (defvar howard-org-agenda-block--active-projects
+    '(tags-todo "-INACTIVE-LATER-CANCELLED-REFILEr/!"
+            ((org-agenda-overriding-header "📚 Active Projects:")
+             (org-agenda-skip-function 'howard/select-projects)))
+    "All active projects: no inactive/someday/cancelled/refile.")
+
+  (defvar howard-org-agenda-block--next-tasks
+    '(tags-todo "-INACTIVE-LATER-CANCELLED-ARCHIVE/!NEXT"
+            ((org-agenda-overriding-header "Next Tasks:")
+             ))
+    "Next tasks.")
+  (defvar howard-org-agenda-display-settings
+    '((org-agenda-start-with-log-mode t)
+      (org-agenda-log-mode-items '(clock))
+      (org-agenda-prefix-format '((agenda . "  %-12:c%?-12t %(gs/org-agenda-add-location-string)% s")
+                  (timeline . "  % s")
+                  (todo . "  %-12:c %(gs/org-agenda-prefix-string) ")
+                  (tags . "  %-12:c %(gs/org-agenda-prefix-string) ")
+                  (search . "  %i %-12:c"))))
+    "Display settings for my agenda views.")
+#+end_src
+** Org
+This section contains the settings for org-mode
+#+begin_src emacs-lisp
+  ;; Org Mode Config
+  (defun display-ansi-colors ()
+    (ansi-color-apply-on-region (point-min) (point-max)))
+  (add-hook 'org-babel-after-execute-hook #'display-ansi-colors)
+
+  (use-package org-super-agenda
+    :after org
+    :config
+    (setq org-super-agenda-header-map (make-sparse-keymap)))
+
+  (use-package org
+    :hook
+    (org-mode . howard/org-mode-setup)
+    (org-mode . flyspell-mode)
+    :config
+    (require 'org-tempo)
+    (setq org-ellipsis " ▾")
+    (howard/org-font-setup)
+    (setq org-agenda-start-with-log-mode t)
+    (advice-add 'org-agenda-goto :after
+                (lambda (&rest args)
+                  (org-narrow-to-subtree)))
+    (setq org-log-done 'time)
+    (setq org-log-into-drawer t)
+    (setq org-agenda-window-setup 'only-window)
+    (setq org-src-window-setup 'only-window)
+    (setq org-hide-emphasis-markers t)
+    (setq org-confirm-babel-evaluate nil)
+    (setq org-latex-pdf-process '("xelatex -interaction nonstopmode %f"
+                              "xelatex -interaction nonstopmode %f"))
+    (plist-put org-format-latex-options :scale 1.5)
+    (org-babel-do-load-languages
+     'org-babel-load-languages
+     '((python . t)
+       (shell . t)
+       (latex . t)
+       (C . t)
+       (jupyter . t)))          ; must be last
+    (setq org-agenda-files
+          (if howard/is-new-laptop
+              '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
+            '("~/Documents/Org-Files/Tasks/Tasks.org" "~/Documents/Org-Files/Tasks/Archive.org")))
+    (setq org-capture-templates
+          '(("t" "Task" entry (file+headline "~/Documents/Org-Files/Tasks/Tasks.org" "Tasks")
+             "* %^{Select your option|TODO|LATER|} %?\n SCHEDULED: %^T")
+            ("p" "Project" entry (file+headline "~/Documents/Org-Files/Tasks/Tasks.org" "Projects")
+                                              "* PROJ %?")))
+    (setq org-todo-keywords
+          '((sequence "TODO(t)" "NEXT(n)" "PROJ(p)" "|" "DONE(d!)")
+            (sequence "WAITING(w@/!)" "INACTIVE(i)" "LATER(l)" "|" "CANCELED(c@/!)")))
+    (advice-add 'org-refile :after 'org-save-all-org-buffers)
+    (howard/org-font-setup)
+    (setq org-agenda-custom-commands
+          `(("d" "Daily Agenda"
+            ((agenda "" (
+                         (org-agenda-span 3)
+                         (org-deadline-warning-days 1)
+                         (org-agenda-overriding-header "📆 Todays Agenda")))
+             (tags-todo "Projects" ((org-agenda-overriding-header "📖 Projects")
+                      (org-super-agenda-groups
+                       '((:auto-group t)))))))
+            ("T" "Test Agenda"
+             (,howard-org-agenda-block--today-schedule
+              ,howard-org-agenda-block--active-projects
+              ,howard-org-agenda-block--three-days-sneak-peek
+              ,howard-org-agenda-block--next-tasks)))))
+  ;; Let org-mode be evil
+  (use-package evil-org
+    :ensure t
+    :after org
+    :hook (org-mode . (lambda () evil-org-mode))
+    :config
+    (require 'evil-org-agenda)
+    (evil-org-agenda-set-keys))
 #+end_src
 ** HTMLize
 Making it look better when exporing org files into =html=.
@@ -669,42 +742,34 @@ Making it look better when exporing org files into =html=.
 #+end_src
 ** Org Roam
 #+begin_src emacs-lisp
-    (use-package org-roam
-        :ensure t
-        :hook
-        (after-init . org-roam-mode)
-        :config
-        (setq org-roam-directory
-              (if howard/is-new-laptop
-                    "/mnt/d/OrgFiles/OrgRoam"
-                    "~/Documents/Org-Files/OrgRoam/"))
-        :custom
-        (org-roam-completion-everywhere t)
-        (org-roam-dailies-directory "journal/")
-        (org-roam-capture-templates
-        '(("d" "default" plain "%?"
-            :target (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
-                                "#+title: ${title}\n")
-            :unnarrowed t)))
-        (org-roam-dailies-capture-templates
-        '(("d" "default" entry "* %?"
-            :target (file+head "%<%Y-%m-%d>.org"
-                                "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))
-        ("t" "Task" entry "* %^{Select your option|TODO|LATER|} %?\n SCHEDULED: %^T" 
-            :target (file+head+olp "Tasks.org"
-                                "#+title: Tasks and Ideas"
-                                ("Tasks")))
-        ("p" "Project" entry "* PROJECT %?" 
-            :target (file+head+olp "Tasks.org"
-                                "#+title: Tasks and Ideas"
-                                ("Projects")))
-        ("j" "journal" entry
-            "* %<%I:%M %p> - Journal  :journal:\n\n%?\n\n"
-            :target (file+head "%<%Y-%m-%d>.org"
-                                "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))))
-        :config
-        (require 'org-roam-dailies) ;; Ensure the keymap is available
-        (org-roam-db-autosync-mode))
+  (use-package org-roam
+      :ensure t
+      :hook
+      (after-init . org-roam-mode)
+      :config
+      (setq org-roam-directory
+            (if howard/is-new-laptop
+                  "/mnt/d/OrgFiles/OrgRoam"
+                  "~/Documents/Org-Files/OrgRoam/"))
+      :custom
+      (org-roam-completion-everywhere t)
+      (org-roam-dailies-directory "journal/")
+      (org-roam-capture-templates
+      '(("d" "default" plain "%?"
+          :target (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                              "#+title: ${title}\n")
+          :unnarrowed t)))
+      (org-roam-dailies-capture-templates
+      '(("d" "default" entry "* %?"
+          :target (file+head "%<%Y-%m-%d>.org"
+                              "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))
+      ("j" "journal" entry
+          "* %<%I:%M %p> - Journal  :journal:\n\n%?\n\n"
+          :target (file+head "%<%Y-%m-%d>.org"
+                              "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<%Y-%B>]]\n\n"))))
+      :config
+      (require 'org-roam-dailies) ;; Ensure the keymap is available
+      (org-roam-db-autosync-mode))
 
 #+end_src
 ** Aesthetics
@@ -729,16 +794,9 @@ Making it look better when exporing org files into =html=.
 ** Auto-Tangling
 TODO: This has to be changed
 #+begin_src emacs-lisp
-  (defun howard/org-babel-tangle-config()
-    (when (string-equal (buffer-file-name)
-			(expand-file-name "~/.emacs.d/Emacs.org"))
-      (let ((org-confirm-babel-evaluate nil))
-	(org-babel-tangle))))
-  (add-hook 'after-save-hook #'howard/org-babel-tangle-config)
-  ;; (org-babel-load-file
-  ;;   (expand-file-name
-  ;;    "Emacs.org"
-  ;;    user-emacs-directory))
+  (use-package org-auto-tangle
+    :defer t
+    :hook (org-mode . org-auto-tangle-mode))
 #+end_src
 * Coding
 ** LSP
@@ -785,6 +843,7 @@ In this section, we will configure for different language settings
                           (lsp))))  ; or lsp-deferred
   ; python
   (require 'dap-python)
+
   (use-package jupyter
     :init (org-babel-jupyter-aliases-from-kernelspecs))
   ;; lua
@@ -840,16 +899,17 @@ Provides better Code highlighting
     :custom
     (conda-anaconda-home "/opt/miniconda3"))
 #+end_src
-*** 
 * Media system
 ** Music
 #+begin_src emacs-lisp
-(use-package emms
-  :commands emms
-  :config
-  (require 'emms-setup)
-  (emms-standard)
-  (emms-default-players)
-  (emms-mode-line-disable)
-  (setq emms-source-file-default-directory "~/Music/"))
+  (use-package emms
+    :commands emms
+    :config
+    (require 'emms-setup)
+    (emms-standard)
+    (emms-default-players)
+    (emms-mode-line-disable)
+    (setq emms-info-functions '(emms-info-exiftool))
+    (setq emms-browser-covers 'emms-browser-cache-thumbnail-async)
+    (setq emms-source-file-default-directory "~/Music/"))
 #+end_src
