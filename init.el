@@ -81,6 +81,8 @@
   :config 
   :init (doom-modeline-mode 1)
   :custom ((doom-modeline-height 5)))
+; A package that can hide the modeline
+(use-package hide-mode-line)
 
 (use-package dashboard
   :hook (dashboard-mode . (lambda () (beacon-mode -1)))
@@ -131,6 +133,14 @@
 (use-package beacon
   :config
   (beacon-mode 1))
+
+(use-package perspective
+  :bind
+  ("C-x C-b" . persp-list-buffers)         ; or use a nicer switcher, see below
+  :custom
+  (persp-mode-prefix-key (kbd "C-c M-p"))  ; pick your own prefix key here
+  :init
+  (persp-mode))
 
 ;; Using garbage magic hack.
  (use-package gcmh
@@ -197,11 +207,11 @@
               ("L" . 'evil-next-buffer)
               ("H" . 'evil-prev-buffer)
               ("Q" . 'image-kill-buffer)
-              ("C-j" . 'evil-window-next)
-              ("C-k" . 'evil-window-prev)
+              ("C-J" . 'evil-window-next)
+              ("C-K" . 'evil-window-prev)
           :map evil-insert-state-map
-              ("C-j" . 'evil-window-next)
-              ("C-k" . 'evil-window-prev)))
+              ("C-J" . 'evil-window-next)
+              ("C-K" . 'evil-window-prev)))
 
 ; A modular evil experience
 (use-package evil-collection
@@ -226,7 +236,7 @@
 
 ;; searching utilities
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-       "." '(counsel-find-file :which-key "Find File")
+       "." '(dirvish :which-key "Dirvish")
        "SPC" '(counsel-M-x :which-key "M-x"))
 ;; searching utilities
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
@@ -234,9 +244,22 @@
        "s f" '(projectile--find-file :which-key "Search Project file")
        "s t" '(counsel-projectile-rg :which-key "Search text")
        "s c" '(counsel-load-theme :which-key "Search colorscheme")
-       "s b" '(counsel-switch-buffer :which-key "Switch buffer")
-       "s p" '(projectile-switch-project : which-key "Search Projects"))
+       "s b" '(persp-counsel-switch-buffer :which-key "Switch buffer")
+       "s p" '(projectile-switch-project :which-key "Search Projects"))
 
+(nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
+       "p" '(perspective-map :which-key "perspective"))
+;; searching utilities
+(nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
+       "m" '(:ignore t :which-key "EMMS")
+       "m m" '(emms :which-key "EMMS Playlist")
+       "m l" '(emms-lyrics-toggle :which-key "EMMS Toggle lyrics")
+       "m ," '(emms-seek-backward :which-key "EMMS Seek Backward")
+       "m ." '(emms-seek-forward :which-key "EMMS Seek Forward")
+       "m z" '(emms-toggle-repeat-track :which-key "EMMS Repeat track")
+       "m Z" '(emms-toggle-repeat-playlist :which-key "EMMS Repeat playlist")
+       "m r" '(emms-toggle-random-playlist :which-key "EMMS Random playlist")
+       "m b" '(emms-browser :which-key "EMMS Browser"))
 ;; neotree
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
        "e" '(treemacs :which-key "TreeMacs"))
@@ -353,10 +376,109 @@
         :map minibuffer-local-map
         ("C-r" . 'counsel-minibuffer-history)))
 
+(use-package anki-editor
+  ;:after org-noter
+  :config
+  (setq anki-editor-create-decks 't))
+
+(use-package calfw
+  :commands cfw:open-org-calendar
+  :config
+  (setq cfw:fchar-junction ?╋
+        cfw:fchar-vertical-line ?┃
+        cfw:fchar-horizontal-line ?━
+        cfw:fchar-left-junction ?┣
+        cfw:fchar-right-junction ?┫
+        cfw:fchar-top-junction ?┯
+        cfw:fchar-top-left-corner ?┏
+        cfw:fchar-top-right-corner ?┓))
+
+(use-package calfw-org)
+
+(defun howard/crontab-e ()
+    "Run `crontab -e' in a emacs buffer."
+    (interactive)
+    (with-editor-async-shell-command "crontab -e"))
+
+;; Better config for dired
+(use-package dired
+  :ensure nil
+  :commands (dired dired-jump)
+  :custom ((dired-listing-switches "-agho --group-directories-first"))
+  :config
+  (evil-collection-define-key 'normal 'dired-mode-map
+    "h" 'dired-up-directory
+    "a" 'dired-create-empty-file
+    "q" 'dirvish-quit
+    "l" 'dired-find-file))
+;; (use-package all-the-icons-dired
+;;   :hook (dired-mode . all-the-icons-dired-mode)
+;;   :init
+;;   (setq all-the-icons-dired-monochrome nil))
+(use-package all-the-icons-dired)
+
+(use-package dirvish
+  :init
+  (dirvish-override-dired-mode)
+  :custom
+  (dirvish-quick-access-entries
+   '(("h" "~/"                          "Home")
+     ("d" "~/Downloads/"                "Downloads")
+     ("m" "/mnt/"                       "Drives")
+     ("t" "~/.local/share/Trash/files/" "TrashCan")))
+  ;; (dirvish-header-line-format '(:left (path) :right (free-space)))
+  (dirvish-mode-line-format ; it's ok to place string inside
+   '(:left (sort file-time " " file-size symlink) :right (omit yank index)))
+  ;; Don't worry, Dirvish is still performant even you enable all these attributes
+  (dirvish-attributes '(all-the-icons file-size collapse subtree-state vc-state git-msg))
+  ;; Maybe the icons are too big to your eyes
+  ;; (dirvish-all-the-icons-height 0.8)
+  ;; In case you want the details at startup like `dired'
+  (dirvish-hide-details t)
+  :config
+  (dirvish-peek-mode)
+  ;; Dired options are respected except a few exceptions, see *In relation to Dired* section above
+  (setq dired-dwim-target t)
+  (setq delete-by-moving-to-trash t)
+  ;; Enable mouse drag-and-drop files to other applications
+  (setq dired-mouse-drag-files t)                   ; added in Emacs 29
+  (setq mouse-drag-and-drop-region-cross-program t) ; added in Emacs 29
+  ;; Make sure to use the long name of flags when exists
+  ;; eg. use "--almost-all" instead of "-A"
+  ;; Otherwise some commands won't work properly
+  (setq dired-listing-switches
+        "-l --almost-all --human-readable --time-style=long-iso --group-directories-first --no-group")
+  :bind
+  ;; Bind `dirvish|dirvish-side|dirvish-dwim' as you see fit
+  (("C-c f" . dirvish-fd)
+   ;; Dirvish has all the keybindings (except `dired-summary') in `dired-mode-map' already
+   :map dirvish-mode-map
+   ("h" . dired-up-directory)
+   ("j" . dired-next-line)
+   ("k" . dired-previous-line)
+   ("l" . dired-find-file)
+   ;; ("i" . wdired-change-to-wdired-mode)
+   ;; ("." . dired-omit-mode)
+   ("f"   . dirvish-file-info-menu)
+   ("y"   . dirvish-yank-menu)
+   ("N"   . dirvish-narrow)
+   ("^"   . dirvish-history-last)
+   ("h"   . dirvish-history-jump) ; remapped `describe-mode'
+   ("s"   . dirvish-quicksort)    ; remapped `dired-sort-toggle-or-edit'
+   ("TAB" . dirvish-subtree-toggle)
+   ("M-n" . dirvish-history-go-forward)
+   ("M-p" . dirvish-history-go-backward)
+   ("M-l" . dirvish-ls-switches-menu)
+   ("M-m" . dirvish-mark-menu)
+   ("M-f" . dirvish-layout-toggle)
+   ("M-s" . dirvish-setup-menu)
+   ("M-e" . dirvish-emerge-menu)
+   ("M-j" . dirvish-fd-jump)))
+
 ; Magit Installation
 (use-package magit
   :custom
-  (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+  (magit-display-buffer-function #'magit-display-buffer-fullframe-status-topleft-v1))
 
 ; Magit Installation
   (use-package git-gutter
@@ -371,37 +493,18 @@
   (define-fringe-bitmap 'git-gutter-fr:modified [224] nil nil '(center repeated))
   (define-fringe-bitmap 'git-gutter-fr:deleted [128 192 224 240] nil nil 'bottom))
 
-(use-package calfw
-  :commands cfw:open-org-calendar
+(use-package leetcode
+  :defer t
   :config
-  (setq cfw:fchar-junction ?╋
-        cfw:fchar-vertical-line ?┃
-        cfw:fchar-horizontal-line ?━
-        cfw:fchar-left-junction ?┣
-        cfw:fchar-right-junction ?┫
-        cfw:fchar-top-junction ?┯
-        cfw:fchar-top-left-corner ?┏
-        cfw:fchar-top-right-corner ?┓))
+  (setq leetcode-prefer-language "python3"))
+(add-to-list 'exec-path "~/.local/bin")
 
-(use-package calfw-org
+(use-package pdf-tools
+  :hook (pdf-view-mode . hide-mode-line-mode)
+  :after evil-collection
+  :magic ("%PDF" . pdf-view-mode)
   :config
-  (setq cfw:org-agenda-schedule-args '(:timestamp)))
-
-(use-package pdf-tools)
-
-;; Better config for dired
-(use-package dired
-  :ensure nil
-  :commands (dired dired-jump)
-  :custom ((dired-listing-switches "-agho --group-directories-first"))
-  :config
-  (evil-collection-define-key 'normal 'dired-mode-map
-    "h" 'dired-up-directory
-    "l" 'dired-find-alternate-file))
-(use-package all-the-icons-dired
-  :hook (dired-mode . all-the-icons-dired-mode)
-  :init
-  (setq all-the-icons-dired-monochrome nil))
+  (pdf-tools-install))
 
 ;; Project management
 (use-package rg) ; searching for text in project
@@ -409,8 +512,6 @@
   :config (projectile-mode))
 (use-package counsel-projectile
   :config (counsel-projectile-mode))
-
-(use-package writeroom-mode)
 
 (use-package shrface
   :defer t
@@ -427,12 +528,8 @@
   :config
   (require 'shrface))
 
-(use-package leetcode
-  :config
-  (setq leetcode-prefer-language "python3"))
-(add-to-list 'exec-path "~/.local/bin")
-
 (use-package go-translate
+  :defer t
   :config
   (setq gts-translate-list '(("en" "zh") ("zh" "en")))
   (setq get-default-translator
@@ -440,6 +537,12 @@
          :picker (gts-prompt-picker)
          :engines (list (gts-google-engine))
          :render (gts-buffer-render))))
+
+(use-package wttrin
+  :config
+  (setq wttrin-default-cities '("Taipei" "Hsinchu")))
+
+(use-package writeroom-mode)
 
 ;; Org-mode
 (defun howard/org-mode-setup ()
@@ -483,8 +586,8 @@
 (defun howard/org-refile-to-datetree (&optional file)
   "Refile a subtree to a datetree corresponding to it's timestamp.
 
-The current time is used if the entry has no timestamp. If FILE
-is nil, refile in the current file."
+  The current time is used if the entry has no timestamp. If FILE
+  is nil, refile in the current file."
   (interactive "f")
   (let* ((datetree-date (or (org-entry-get nil "TIMESTAMP" t)
                             (org-read-date t nil "now")))
@@ -509,26 +612,52 @@ is nil, refile in the current file."
   "A task with a 'PROJ' keyword"
   (member (nth 2 (org-heading-components)) '("PROJ")))
 
+(defun howard/is-project-subtree-p ()
+  "Any task with a todo keyword that is in a project subtree.
+Callers of this function already widen the buffer view."
+  (let ((task (save-excursion (org-back-to-heading 'invisible-ok)
+                              (point))))
+    (save-excursion
+      (howard/find-project-task)
+      (if (equal (point) task)
+          nil t))))
+
+(defun howard/find-project-task ()
+  "Any task with a todo keyword that is in a project subtree"
+  (save-restriction
+    (widen)
+    (let ((parent-task (save-excursion (org-back-to-heading 'invisible-ok) (point))))
+      (while (org-up-heading-safe)
+    (when (member (nth 2 (org-heading-components)) '("PROJ"))
+      (setq parent-task (point))))
+      (goto-char parent-task)
+      parent-task)))
+
 (defun howard/select-with-tag-function (select-fun-p)
   (save-restriction
     (widen)
     (let ((next-headline
-       (save-excursion (or (outline-next-heading)
-                   (point-max)))))
+           (save-excursion (or (outline-next-heading)
+                               (point-max)))))
       (if (funcall select-fun-p) nil next-headline))))
 
 (defun howard/select-projects ()
   "Selects tasks which are project headers"
   (howard/select-with-tag-function #'howard/is-project-p))
-
+(defun howard/select-project-tasks ()
+  "Skips tags which belong to projects (and is not a project itself)"
+  (howard/select-with-tag-function
+   #'(lambda () (and
+                 (not (howard/is-project-p))
+                 (howard/is-project-subtree-p)))))
 (defvar howard-org-agenda-block--today-schedule
   '(agenda "" ((org-agenda-overriding-header "🗓 Today's Schedule:")
-           (org-agenda-span 'day)
-           (org-agenda-ndays 1)
-           (org-deadline-warning-days 1)
-           (org-agenda-start-on-weekday nil)
-           (org-agenda-start-day "+0d")))
-  "A block showing a 1 day schedule.")
+               (org-agenda-span 'day)
+               (org-agenda-ndays 1)
+               (org-deadline-warning-days 1)
+               (org-agenda-start-on-weekday nil)
+               (org-agenda-start-day "+0d")))
+    "A block showing a 1 day schedule.")
 
 (defvar howard-org-agenda-block--weekly-log
   '(agenda "" ((org-agenda-overriding-header "📅 Weekly Log")
@@ -544,25 +673,30 @@ is nil, refile in the current file."
   "A block showing what to do for the next three days. ")
 
 (defvar howard-org-agenda-block--active-projects
-  '(tags-todo "-INACTIVE-LATER-CANCELLED-REFILEr/!"
-          ((org-agenda-overriding-header "📚 Active Projects:")
-           (org-agenda-skip-function 'howard/select-projects)))
-  "All active projects: no inactive/someday/cancelled/refile.")
+    '(tags-todo "-INACTIVE-LATER-CANCELLED-REFILEr/!"
+                ((org-agenda-overriding-header "📚 Active Projects:")
+                 (org-agenda-skip-function 'howard/select-projects)))
+    "All active projects: no inactive/someday/cancelled/refile.")
 
 (defvar howard-org-agenda-block--next-tasks
   '(tags-todo "-INACTIVE-LATER-CANCELLED-ARCHIVE/!NEXT"
-          ((org-agenda-overriding-header "Next Tasks:")
-           ))
+              ((org-agenda-overriding-header "👉 Next Tasks:")))
   "Next tasks.")
 (defvar howard-org-agenda-display-settings
   '((org-agenda-start-with-log-mode t)
     (org-agenda-log-mode-items '(clock))
     (org-agenda-prefix-format '((agenda . "  %-12:c%?-12t %(gs/org-agenda-add-location-string)% s")
-                (timeline . "  % s")
-                (todo . "  %-12:c %(gs/org-agenda-prefix-string) ")
-                (tags . "  %-12:c %(gs/org-agenda-prefix-string) ")
-                (search . "  %i %-12:c"))))
+                                (timeline . "  % s")
+                                (todo . "  %-12:c %(gs/org-agenda-prefix-string) ")
+                                (tags . "  %-12:c %(gs/org-agenda-prefix-string) ")
+                                (search . "  %i %-12:c"))))
   "Display settings for my agenda views.")
+
+(defvar howard-org-agenda-block--remaining-project-tasks
+  '(tags-todo "-INACTIVE-SOMEDAY-CANCELLED-WAITING-REFILE-ARCHIVE/!-NEXT"
+              ((org-agenda-overriding-header "Remaining Project Tasks:")
+               (org-agenda-skip-function 'howard/select-project-tasks)))
+  "Non-NEXT TODO items belonging to a project.")
 
 ;; Org Mode Config
 (defun display-ansi-colors ()
@@ -586,8 +720,9 @@ is nil, refile in the current file."
   (advice-add 'org-agenda-goto :after
               (lambda (&rest args)
                 (org-narrow-to-subtree)))
-  (setq org-log-done 'time)
   (setq org-log-into-drawer t)
+  (setq org-adapt-indentation t)
+  (setq org-indent-mode-turns-off-org-adapt-indentation nil)
   (setq org-agenda-window-setup 'only-window)
   (setq org-src-window-setup 'only-window)
   (setq org-hide-emphasis-markers t)
@@ -618,18 +753,11 @@ is nil, refile in the current file."
   (howard/org-font-setup)
   (setq org-agenda-custom-commands
         `(("d" "Daily Agenda"
-          ((agenda "" (
-                       (org-agenda-span 3)
-                       (org-deadline-warning-days 1)
-                       (org-agenda-overriding-header "📆 Todays Agenda")))
-           (tags-todo "Projects" ((org-agenda-overriding-header "📖 Projects")
-                    (org-super-agenda-groups
-                     '((:auto-group t)))))))
-          ("T" "Test Agenda"
            (,howard-org-agenda-block--today-schedule
-            ,howard-org-agenda-block--active-projects
             ,howard-org-agenda-block--three-days-sneak-peek
-            ,howard-org-agenda-block--next-tasks)))))
+            ,howard-org-agenda-block--active-projects
+            ,howard-org-agenda-block--next-tasks
+            ,howard-org-agenda-block--remaining-project-tasks)))))
 ;; Let org-mode be evil
 (use-package evil-org
   :ensure t
@@ -638,8 +766,6 @@ is nil, refile in the current file."
   :config
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
-
-(use-package htmlize)
 
 (use-package org-roam
     :ensure t
@@ -669,6 +795,17 @@ is nil, refile in the current file."
     :config
     (require 'org-roam-dailies) ;; Ensure the keymap is available
     (org-roam-db-autosync-mode))
+
+(use-package org-alert
+  :config
+  (setq alert-default-style 'notifications
+        org-alert-interval 900
+        org-alert-notification-title "🔔 Org Agenda"
+        org-alert-notify-after-event-cutoff 10
+        org-alert-notify-cutoff 100)
+  (org-alert-enable))
+
+(use-package htmlize)
 
 (use-package org-bullets
   :after org
@@ -701,7 +838,8 @@ is nil, refile in the current file."
     "K" 'lsp-ui-doc-show)
   (lsp-enable-which-key-integration t))
 
-(use-package lsp-ui)
+(use-package lsp-ui
+  :after lsp-mode)
 ; debugger-mode
 (use-package dap-mode :after lsp-mode :config (dap-auto-configure-mode))
 
@@ -725,6 +863,7 @@ is nil, refile in the current file."
 (require 'dap-python)
 
 (use-package jupyter
+  :defer t
   :init (org-babel-jupyter-aliases-from-kernelspecs))
 ;; lua
 (use-package lua-mode
@@ -769,13 +908,71 @@ is nil, refile in the current file."
   :custom
   (conda-anaconda-home "/opt/miniconda3"))
 
+;; Keyboard shortcuts
+(defun pad-string (str len)
+  "Return a string of length LEN starting with STR, truncating or padding as necessary."
+  (let* ((str-len (length str))
+         (extra-len (- len str-len)))
+    (if (>= extra-len 0)
+        (concat str (make-string extra-len ? ))
+      (concat (substring str 0 (- len 3)) "..."))))
+
+(defun my-emms-track-description-function (track)
+  "Detailed track listing for TRACK."
+  (let ((type (emms-track-get track 'type))
+        (name (emms-track-get track 'name))
+        (artist (emms-track-get track 'info-artist))
+        (album (emms-track-get track 'info-album))
+        (title (emms-track-get track 'info-title))
+        (tracknumber (emms-track-get track 'info-tracknumber))
+        (year (emms-track-get-year track))
+        (timet (emms-track-get track 'info-playing-time)))
+    (cond ((eq type 'file)
+           ;; If it has a minimum of metadata
+           (if (and artist title)
+               (concat
+                " "
+                (pad-string
+                 (if title
+                     (if tracknumber
+                         (concat "[" (format "%02d" (string-to-number tracknumber)) "] " title) title) "Unknown Title") 33)
+            "  "
+            (pad-string (if timet (format "%02d:%02d" (/ timet 60) (% timet 60)) "") 5)
+            "  "
+            (pad-string (or artist "Unknown Artist") 18)
+            "  "
+            (pad-string (if album
+                            (if year album) "Unknown Album") 25)
+            "  "
+            (pad-string (or year "") 4)) name))
+          ((eq 'url type)
+           (emms-format-url-track-name name))
+          ;; E.g. playlists
+          (t (concat (symbol-name type) ":" name)))))
+
 (use-package emms
   :commands emms
+  :hook ((emms-playlist-mode . (lambda () (beacon-mode -1)))
+         (emms-browser-mode . (lambda () (beacon-mode -1))))
+  :bind
+  (("<f9>" . emms-pause)
+   ("<f10>" . emms-stop)
+   ("<f11>" . emms-previous)
+   ("<f12>" . emms-next))
   :config
   (require 'emms-setup)
   (emms-standard)
   (emms-default-players)
   (emms-mode-line-disable)
+  (setq emms-lyrics-display-on-modeline nil)
+  (setq emms-lyrics-display-on-minibuffer t)
+  (setq emms-track-description-function 'my-emms-track-description-function)
   (setq emms-info-functions '(emms-info-exiftool))
+  (setq emms-seek-seconds 5)
   (setq emms-browser-covers 'emms-browser-cache-thumbnail-async)
   (setq emms-source-file-default-directory "~/Music/"))
+
+(use-package lyrics-fetcher
+  :after (emms)
+  :config
+  (lyrics-fetcher-use-backend 'neteasecloud))

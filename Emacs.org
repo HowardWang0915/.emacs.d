@@ -884,12 +884,7 @@ This section contains the settings for org-mode
     (require 'evil-org-agenda)
     (evil-org-agenda-set-keys))
 #+end_src
-** HTMLize
-Making it look better when exporing org files into =html=.
-#+begin_src emacs-lisp
-  (use-package htmlize)
-#+end_src
-** Org Roam
+*** Org Roam
 #+begin_src emacs-lisp
   (use-package org-roam
       :ensure t
@@ -980,7 +975,8 @@ TODO: This has to be changed
       "K" 'lsp-ui-doc-show)
     (lsp-enable-which-key-integration t))
 
-  (use-package lsp-ui)
+  (use-package lsp-ui
+    :after lsp-mode)
   ; debugger-mode
   (use-package dap-mode :after lsp-mode :config (dap-auto-configure-mode))
 #+end_src
@@ -1068,14 +1064,72 @@ Provides better Code highlighting
 * Media system
 ** Music
 #+begin_src emacs-lisp
+  ;; Keyboard shortcuts
+  (defun pad-string (str len)
+    "Return a string of length LEN starting with STR, truncating or padding as necessary."
+    (let* ((str-len (length str))
+           (extra-len (- len str-len)))
+      (if (>= extra-len 0)
+          (concat str (make-string extra-len ? ))
+        (concat (substring str 0 (- len 3)) "..."))))
+
+  (defun my-emms-track-description-function (track)
+    "Detailed track listing for TRACK."
+    (let ((type (emms-track-get track 'type))
+          (name (emms-track-get track 'name))
+          (artist (emms-track-get track 'info-artist))
+          (album (emms-track-get track 'info-album))
+          (title (emms-track-get track 'info-title))
+          (tracknumber (emms-track-get track 'info-tracknumber))
+          (year (emms-track-get-year track))
+          (timet (emms-track-get track 'info-playing-time)))
+      (cond ((eq type 'file)
+             ;; If it has a minimum of metadata
+             (if (and artist title)
+                 (concat
+                  " "
+                  (pad-string
+                   (if title
+                       (if tracknumber
+                           (concat "[" (format "%02d" (string-to-number tracknumber)) "] " title) title) "Unknown Title") 33)
+              "  "
+              (pad-string (if timet (format "%02d:%02d" (/ timet 60) (% timet 60)) "") 5)
+              "  "
+              (pad-string (or artist "Unknown Artist") 18)
+              "  "
+              (pad-string (if album
+                              (if year album) "Unknown Album") 25)
+              "  "
+              (pad-string (or year "") 4)) name))
+            ((eq 'url type)
+             (emms-format-url-track-name name))
+            ;; E.g. playlists
+            (t (concat (symbol-name type) ":" name)))))
+
   (use-package emms
     :commands emms
+    :hook ((emms-playlist-mode . (lambda () (beacon-mode -1)))
+           (emms-browser-mode . (lambda () (beacon-mode -1))))
+    :bind
+    (("<f9>" . emms-pause)
+     ("<f10>" . emms-stop)
+     ("<f11>" . emms-previous)
+     ("<f12>" . emms-next))
     :config
     (require 'emms-setup)
     (emms-standard)
     (emms-default-players)
     (emms-mode-line-disable)
+    (setq emms-lyrics-display-on-modeline nil)
+    (setq emms-lyrics-display-on-minibuffer t)
+    (setq emms-track-description-function 'my-emms-track-description-function)
     (setq emms-info-functions '(emms-info-exiftool))
+    (setq emms-seek-seconds 5)
     (setq emms-browser-covers 'emms-browser-cache-thumbnail-async)
     (setq emms-source-file-default-directory "~/Music/"))
+
+  (use-package lyrics-fetcher
+    :after (emms)
+    :config
+    (lyrics-fetcher-use-backend 'neteasecloud))
 #+end_src
