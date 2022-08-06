@@ -27,8 +27,10 @@ In this section, we want to identify the type of our system to do system-specifi
   (setq howard/is-new-laptop (string= system-name "LAPTOP-LDFS2SBR"))
 #+end_src
 * Basic UI Configuration
+
 ** Default UI
-In this section, we want to disable a lot of things that comes out out of the box of Emacs, which includes tool bars and menus.
+
+   In this section, we want to disable a lot of things that comes out out of the box of Emacs, which includes tool bars and menus.
 #+begin_src emacs-lisp
   (setq inhibit-startup-message t)
 
@@ -47,6 +49,7 @@ In this section, we want to disable a lot of things that comes out out of the bo
   (setq indent-line-function 'insert-tab)
 #+end_src
 ** Scrolling
+   
 The default scrolling in emacs sucks.
 #+begin_src emacs-lisp
   ; A vim like scrolling expierence
@@ -103,6 +106,8 @@ Below we setup custom functions to setup the fonts.
     :config 
     :init (doom-modeline-mode 1)
     :custom ((doom-modeline-height 5)))
+  ; A package that can hide the modeline
+  (use-package hide-mode-line)
 #+end_src
 ** Dashboards
 #+begin_src emacs-lisp
@@ -170,7 +175,20 @@ Never loose your cursor again!
     :config
     (beacon-mode 1))
 #+end_src
+** Buffer Management
+   In this section, we will use the package =perspective-el= to manage multiple sessions.
+   #+begin_src emacs-lisp
+     (use-package perspective
+       :bind
+       ("C-x C-b" . persp-list-buffers)         ; or use a nicer switcher, see below
+       :custom
+       (persp-mode-prefix-key (kbd "C-c M-p"))  ; pick your own prefix key here
+       :init
+       (persp-mode))
+   #+end_src
+
 * Optimization
+
 ** Garbage cleaning
 #+begin_src emacs-lisp
   ;; Using garbage magic hack.
@@ -249,11 +267,11 @@ Never loose your cursor again!
                 ("L" . 'evil-next-buffer)
                 ("H" . 'evil-prev-buffer)
                 ("Q" . 'image-kill-buffer)
-                ("C-j" . 'evil-window-next)
-                ("C-k" . 'evil-window-prev)
+                ("C-J" . 'evil-window-next)
+                ("C-K" . 'evil-window-prev)
             :map evil-insert-state-map
-                ("C-j" . 'evil-window-next)
-                ("C-k" . 'evil-window-prev)))
+                ("C-J" . 'evil-window-next)
+                ("C-K" . 'evil-window-prev)))
 
   ; A modular evil experience
   (use-package evil-collection
