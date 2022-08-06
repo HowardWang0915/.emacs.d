@@ -299,7 +299,7 @@ Never loose your cursor again!
 
   ;; searching utilities
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-         "." '(counsel-find-file :which-key "Find File")
+         "." '(dirvish :which-key "Dirvish")
          "SPC" '(counsel-M-x :which-key "M-x"))
   ;; searching utilities
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
@@ -307,9 +307,22 @@ Never loose your cursor again!
          "s f" '(projectile--find-file :which-key "Search Project file")
          "s t" '(counsel-projectile-rg :which-key "Search text")
          "s c" '(counsel-load-theme :which-key "Search colorscheme")
-         "s b" '(counsel-switch-buffer :which-key "Switch buffer")
-         "s p" '(projectile-switch-project : which-key "Search Projects"))
+         "s b" '(persp-counsel-switch-buffer :which-key "Switch buffer")
+         "s p" '(projectile-switch-project :which-key "Search Projects"))
 
+  (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
+         "p" '(perspective-map :which-key "perspective"))
+  ;; searching utilities
+  (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
+         "m" '(:ignore t :which-key "EMMS")
+         "m m" '(emms :which-key "EMMS Playlist")
+         "m l" '(emms-lyrics-toggle :which-key "EMMS Toggle lyrics")
+         "m ," '(emms-seek-backward :which-key "EMMS Seek Backward")
+         "m ." '(emms-seek-forward :which-key "EMMS Seek Forward")
+         "m z" '(emms-toggle-repeat-track :which-key "EMMS Repeat track")
+         "m Z" '(emms-toggle-repeat-playlist :which-key "EMMS Repeat playlist")
+         "m r" '(emms-toggle-random-playlist :which-key "EMMS Random playlist")
+         "m b" '(emms-browser :which-key "EMMS Browser"))
   ;; neotree
   (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
          "e" '(treemacs :which-key "TreeMacs"))
@@ -431,28 +444,13 @@ Using Ivy and Counsel
           ("C-r" . 'counsel-minibuffer-history)))
 #+end_src
 * Plugins
-** Git
-*** Magit
+** Anki
+An anki editor to create flash cards in org mode.
 #+begin_src emacs-lisp
-  ; Magit Installation
-  (use-package magit
-    :custom
-    (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
-#+end_src
-*** Git-Gutter
-#+begin_src emacs-lisp
-    ; Magit Installation
-    (use-package git-gutter
-      :hook (prog-mode . git-gutter-mode)
-      :config
-      (setq git-gutter:update-interval 0.02)
-      (git-gutter-mode))
-
-  (use-package git-gutter-fringe
+  (use-package anki-editor
+    :after org-noter
     :config
-    (define-fringe-bitmap 'git-gutter-fr:added [224] nil nil '(center repeated))
-    (define-fringe-bitmap 'git-gutter-fr:modified [224] nil nil '(center repeated))
-    (define-fringe-bitmap 'git-gutter-fr:deleted [128 192 224 240] nil nil 'bottom))
+    (setq anki-editor-create-decks 't))
 #+end_src
 ** Calendar
 *** Calfw
@@ -470,15 +468,19 @@ Using Ivy and Counsel
           cfw:fchar-top-left-corner ?┏
           cfw:fchar-top-right-corner ?┓))
 
-  (use-package calfw-org
-    :config
-    (setq cfw:org-agenda-schedule-args '(:timestamp)))
+  (use-package calfw-org)
 #+end_src   
-** Pdf-tool
-#+begin_src emacs-lisp
-  (use-package pdf-tools)
-#+end_src
-** Dired
+** Crontab
+   I don't want to open another terminal to edit my crontab files
+   #+begin_src emacs-lisp
+     (defun howard/crontab-e ()
+         "Run `crontab -e' in a emacs buffer."
+         (interactive)
+         (with-editor-async-shell-command "crontab -e"))
+   #+end_src
+** File Management
+In this section, we will put packages that are related to file management
+*** Dired
 #+begin_src emacs-lisp
   ;; Better config for dired
   (use-package dired
