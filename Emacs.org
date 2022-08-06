@@ -693,14 +693,15 @@ A distraction-free plugin for writing
     (set-face-attribute 'org-block-begin-line nil :inherit '(shadow fixed-pitch)))
   (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
 #+end_src
-** Org-agenda helper functions
+** Org
+*** Org-agenda helper functions
 Before using the package of org, we define several helper functions and variables to help out the process.
 #+begin_src emacs-lisp
   (defun howard/org-refile-to-datetree (&optional file)
     "Refile a subtree to a datetree corresponding to it's timestamp.
 
-  The current time is used if the entry has no timestamp. If FILE
-  is nil, refile in the current file."
+    The current time is used if the entry has no timestamp. If FILE
+    is nil, refile in the current file."
     (interactive "f")
     (let* ((datetree-date (or (org-entry-get nil "TIMESTAMP" t)
                               (org-read-date t nil "now")))
@@ -725,26 +726,52 @@ Before using the package of org, we define several helper functions and variable
     "A task with a 'PROJ' keyword"
     (member (nth 2 (org-heading-components)) '("PROJ")))
 
+  (defun howard/is-project-subtree-p ()
+    "Any task with a todo keyword that is in a project subtree.
+  Callers of this function already widen the buffer view."
+    (let ((task (save-excursion (org-back-to-heading 'invisible-ok)
+                                (point))))
+      (save-excursion
+        (howard/find-project-task)
+        (if (equal (point) task)
+            nil t))))
+
+  (defun howard/find-project-task ()
+    "Any task with a todo keyword that is in a project subtree"
+    (save-restriction
+      (widen)
+      (let ((parent-task (save-excursion (org-back-to-heading 'invisible-ok) (point))))
+        (while (org-up-heading-safe)
+      (when (member (nth 2 (org-heading-components)) '("PROJ"))
+        (setq parent-task (point))))
+        (goto-char parent-task)
+        parent-task)))
+
   (defun howard/select-with-tag-function (select-fun-p)
     (save-restriction
       (widen)
       (let ((next-headline
-         (save-excursion (or (outline-next-heading)
-                     (point-max)))))
+             (save-excursion (or (outline-next-heading)
+                                 (point-max)))))
         (if (funcall select-fun-p) nil next-headline))))
 
   (defun howard/select-projects ()
     "Selects tasks which are project headers"
     (howard/select-with-tag-function #'howard/is-project-p))
-
+  (defun howard/select-project-tasks ()
+    "Skips tags which belong to projects (and is not a project itself)"
+    (howard/select-with-tag-function
+     #'(lambda () (and
+                   (not (howard/is-project-p))
+                   (howard/is-project-subtree-p)))))
   (defvar howard-org-agenda-block--today-schedule
     '(agenda "" ((org-agenda-overriding-header "🗓 Today's Schedule:")
-             (org-agenda-span 'day)
-             (org-agenda-ndays 1)
-             (org-deadline-warning-days 1)
-             (org-agenda-start-on-weekday nil)
-             (org-agenda-start-day "+0d")))
-    "A block showing a 1 day schedule.")
+                 (org-agenda-span 'day)
+                 (org-agenda-ndays 1)
+                 (org-deadline-warning-days 1)
+                 (org-agenda-start-on-weekday nil)
+                 (org-agenda-start-day "+0d")))
+      "A block showing a 1 day schedule.")
 
   (defvar howard-org-agenda-block--weekly-log
     '(agenda "" ((org-agenda-overriding-header "📅 Weekly Log")
@@ -760,27 +787,32 @@ Before using the package of org, we define several helper functions and variable
     "A block showing what to do for the next three days. ")
 
   (defvar howard-org-agenda-block--active-projects
-    '(tags-todo "-INACTIVE-LATER-CANCELLED-REFILEr/!"
-            ((org-agenda-overriding-header "📚 Active Projects:")
-             (org-agenda-skip-function 'howard/select-projects)))
-    "All active projects: no inactive/someday/cancelled/refile.")
+      '(tags-todo "-INACTIVE-LATER-CANCELLED-REFILEr/!"
+                  ((org-agenda-overriding-header "📚 Active Projects:")
+                   (org-agenda-skip-function 'howard/select-projects)))
+      "All active projects: no inactive/someday/cancelled/refile.")
 
   (defvar howard-org-agenda-block--next-tasks
     '(tags-todo "-INACTIVE-LATER-CANCELLED-ARCHIVE/!NEXT"
-            ((org-agenda-overriding-header "Next Tasks:")
-             ))
+                ((org-agenda-overriding-header "👉 Next Tasks:")))
     "Next tasks.")
   (defvar howard-org-agenda-display-settings
     '((org-agenda-start-with-log-mode t)
       (org-agenda-log-mode-items '(clock))
       (org-agenda-prefix-format '((agenda . "  %-12:c%?-12t %(gs/org-agenda-add-location-string)% s")
-                  (timeline . "  % s")
-                  (todo . "  %-12:c %(gs/org-agenda-prefix-string) ")
-                  (tags . "  %-12:c %(gs/org-agenda-prefix-string) ")
-                  (search . "  %i %-12:c"))))
+                                  (timeline . "  % s")
+                                  (todo . "  %-12:c %(gs/org-agenda-prefix-string) ")
+                                  (tags . "  %-12:c %(gs/org-agenda-prefix-string) ")
+                                  (search . "  %i %-12:c"))))
     "Display settings for my agenda views.")
+
+  (defvar howard-org-agenda-block--remaining-project-tasks
+    '(tags-todo "-INACTIVE-SOMEDAY-CANCELLED-WAITING-REFILE-ARCHIVE/!-NEXT"
+                ((org-agenda-overriding-header "Remaining Project Tasks:")
+                 (org-agenda-skip-function 'howard/select-project-tasks)))
+    "Non-NEXT TODO items belonging to a project.")
 #+end_src
-** Org
+*** Org Mode and Org Agenda
 This section contains the settings for org-mode
 #+begin_src emacs-lisp
   ;; Org Mode Config
@@ -805,8 +837,9 @@ This section contains the settings for org-mode
     (advice-add 'org-agenda-goto :after
                 (lambda (&rest args)
                   (org-narrow-to-subtree)))
-    (setq org-log-done 'time)
     (setq org-log-into-drawer t)
+    (setq org-adapt-indentation t)
+    (setq org-indent-mode-turns-off-org-adapt-indentation nil)
     (setq org-agenda-window-setup 'only-window)
     (setq org-src-window-setup 'only-window)
     (setq org-hide-emphasis-markers t)
@@ -837,18 +870,11 @@ This section contains the settings for org-mode
     (howard/org-font-setup)
     (setq org-agenda-custom-commands
           `(("d" "Daily Agenda"
-            ((agenda "" (
-                         (org-agenda-span 3)
-                         (org-deadline-warning-days 1)
-                         (org-agenda-overriding-header "📆 Todays Agenda")))
-             (tags-todo "Projects" ((org-agenda-overriding-header "📖 Projects")
-                      (org-super-agenda-groups
-                       '((:auto-group t)))))))
-            ("T" "Test Agenda"
              (,howard-org-agenda-block--today-schedule
-              ,howard-org-agenda-block--active-projects
               ,howard-org-agenda-block--three-days-sneak-peek
-              ,howard-org-agenda-block--next-tasks)))))
+              ,howard-org-agenda-block--active-projects
+              ,howard-org-agenda-block--next-tasks
+              ,howard-org-agenda-block--remaining-project-tasks)))))
   ;; Let org-mode be evil
   (use-package evil-org
     :ensure t
@@ -894,6 +920,23 @@ Making it look better when exporing org files into =html=.
       (require 'org-roam-dailies) ;; Ensure the keymap is available
       (org-roam-db-autosync-mode))
 
+#+end_src
+*** Org Alert
+A package that shows system notification from my agenda
+#+begin_src emacs-lisp
+  (use-package org-alert
+    :config
+    (setq alert-default-style 'notifications
+          org-alert-interval 900
+          org-alert-notification-title "🔔 Org Agenda"
+          org-alert-notify-after-event-cutoff 10
+          org-alert-notify-cutoff 100)
+    (org-alert-enable))
+#+end_src
+** HTMLize
+Making it look better when exporing org files into =html=.
+#+begin_src emacs-lisp
+  (use-package htmlize)
 #+end_src
 ** Aesthetics
 *** Org-bullets
