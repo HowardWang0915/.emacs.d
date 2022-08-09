@@ -118,7 +118,7 @@ Below we setup custom functions to setup the fonts.
     (setq dashboard-set-file-icons t)
     (setq dashboard-banner-logo-title "Emacs Is More Than A Text Editor!")
     (setq dashboard-startup-banner 'logo) ;; use standard emacs logo as banner
-    (setq dashboard-center-content nil) ;; set to 't' for centered content
+    (setq dashboard-center-content t) ;; set to 't' for centered content
     (setq initial-buffer-choice (lambda() (get-buffer-create "*dashboard*")))
     (setq dashboard-items '((recents . 5)
                             (agenda . 5 )
