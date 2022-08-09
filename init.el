@@ -290,11 +290,17 @@
        "o" '(:ignore t :which-key "Org-Mode")
        "o r" '(:ignore t :which-key "Org-Roam")
        "o d" '(:ignore t :which-key "Org-Dailies")
+       "o l" '(:ignore t :which-key "Org-Links")
        "o a" '(org-agenda :which-key "Org Agenda")
        "o s" '(org-schedule :which-key "Org Schedule")
        "o n" '(org-narrow-to-subtree :which-key "Org Narrow to Tree")
        "o w" '(widen :which-key "Widen")
        "o c" '(org-capture :which-key "Org Capture")
+       "o e" '(org-export-dispatch :which-key "Org Export")
+       "o l s" '(org-store-link :which-key "Org Store link")
+       "o l i" '(org-insert-link :which-key "Org Insert link")
+       "o l d" '(org-toggle-link-display :which-key "Org Link Display")
+       "o l o" '(org-open-at-point :which-key "Org Link Open")
        "o r c" '(org-roam-capture :which-key "Org Roam Capture")
        "o r f" '(org-roam-node-find :which-key "Find Org Roam file")
        "o d t" '(org-roam-dailies-goto-today :which-key "Show Dailies Today")
@@ -377,7 +383,7 @@
         ("C-r" . 'counsel-minibuffer-history)))
 
 (use-package anki-editor
-  ;:after org-noter
+  :after org-noter
   :config
   (setq anki-editor-create-decks 't))
 
@@ -505,6 +511,10 @@
   :magic ("%PDF" . pdf-view-mode)
   :config
   (pdf-tools-install))
+
+
+(use-package org-pdftools
+  :hook (org-mode . org-pdftools-setup-link))
 
 ;; Project management
 (use-package rg) ; searching for text in project
@@ -864,10 +874,14 @@ Callers of this function already widen the buffer view."
 
 (use-package jupyter
   :defer t
-  :init (org-babel-jupyter-aliases-from-kernelspecs))
+  :after (org conda)
+  :config
+  (org-babel-jupyter-aliases-from-kernelspecs))
+
 ;; lua
 (use-package lua-mode
   :hook (lua-mode . electric-pair-mode))
+
 (use-package markdown-mode
   :custom (markdown-command "/usr/sbin/pandoc"))
 ;; add electric mode to all programing mode

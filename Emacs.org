@@ -353,11 +353,17 @@ Never loose your cursor again!
          "o" '(:ignore t :which-key "Org-Mode")
          "o r" '(:ignore t :which-key "Org-Roam")
          "o d" '(:ignore t :which-key "Org-Dailies")
+         "o l" '(:ignore t :which-key "Org-Links")
          "o a" '(org-agenda :which-key "Org Agenda")
          "o s" '(org-schedule :which-key "Org Schedule")
          "o n" '(org-narrow-to-subtree :which-key "Org Narrow to Tree")
          "o w" '(widen :which-key "Widen")
          "o c" '(org-capture :which-key "Org Capture")
+         "o e" '(org-export-dispatch :which-key "Org Export")
+         "o l s" '(org-store-link :which-key "Org Store link")
+         "o l i" '(org-insert-link :which-key "Org Insert link")
+         "o l d" '(org-toggle-link-display :which-key "Org Link Display")
+         "o l o" '(org-open-at-point :which-key "Org Link Open")
          "o r c" '(org-roam-capture :which-key "Org Roam Capture")
          "o r f" '(org-roam-node-find :which-key "Find Org Roam file")
          "o d t" '(org-roam-dailies-goto-today :which-key "Show Dailies Today")
@@ -470,7 +476,7 @@ An anki editor to create flash cards in org mode.
 
   (use-package calfw-org)
 #+end_src   
-** Crontab
+** Cron-tab
    I don't want to open another terminal to edit my crontab files
    #+begin_src emacs-lisp
      (defun howard/crontab-e ()
@@ -600,6 +606,11 @@ Leetcode practice in Emacs!
     :magic ("%PDF" . pdf-view-mode)
     :config
     (pdf-tools-install))
+
+
+  (use-package org-pdftools
+    :hook (org-mode . org-pdftools-setup-link))
+
 #+end_src
 ** Projectile
 #+begin_src emacs-lisp
@@ -1007,10 +1018,15 @@ In this section, we will configure for different language settings
   (require 'dap-python)
 
   (use-package jupyter
-    :init (org-babel-jupyter-aliases-from-kernelspecs))
+    :defer t
+    :after (org conda)
+    :config
+    (org-babel-jupyter-aliases-from-kernelspecs))
+
   ;; lua
   (use-package lua-mode
     :hook (lua-mode . electric-pair-mode))
+
   (use-package markdown-mode
     :custom (markdown-command "/usr/sbin/pandoc"))
   ;; add electric mode to all programing mode
