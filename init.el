@@ -33,7 +33,7 @@
 (setq indent-line-function 'insert-tab)
 
 ; A vim like scrolling expierence
-(setq scroll-margin 14)
+(setq scroll-margin 5)
 (setq maximum-scroll-margin 0.5)
 (setq scroll-step 1)
 (setq scroll-conservatively 101)
@@ -887,6 +887,12 @@ Callers of this function already widen the buffer view."
 ;; add electric mode to all programing mode
 (add-hook 'prog-mode-hook 'electric-pair-mode)
 
+;; make scroll margin only in prog-mode
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (make-local-variable 'scroll-margin)
+            (setq scroll-margin 14)))
+
 ;; completion framework
 (use-package company
   :hook ((python-mode java-mode emacs-lisp-mode) . company-mode)
@@ -914,6 +920,11 @@ Callers of this function already widen the buffer view."
   :after esh-mode
   :config
   (eshell-syntax-highlighting-global-mode +1))
+ ;; disable scroll margin in eshell
+(add-hook 'eshell-mode-hook
+          (lambda ()
+            (make-local-variable 'scroll-margin)
+            (setq scroll-margin 0)))
 ;; Add conda to eshell
 (use-package conda
   :config
