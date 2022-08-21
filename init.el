@@ -110,6 +110,11 @@
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
 
+(use-package rainbow-mode
+  :disabled
+  :hook
+  ((prog-mode) . (rainbow-mode)))
+
 ; A better help system
 (use-package helpful
   :custom
@@ -326,6 +331,9 @@
        "g s" '(git-gutter:stage-hunk :which-key "Stage Hunk")
        "g u" '(git-gutter:revert-hunk :which-key "Unstage Hunk")
        "g k" '(git-gutter:previous-hunk :which-key "Prev Hunk"))
+;; translate
+(nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
+  "T" '(gts-do-translate :which-key "translate"))
 ;; terminal related
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
        "t" '(:ignore t :which-key "terminal")
@@ -642,6 +650,46 @@
         ))
     )
   )
+
+(defun howard/org-agenda-project-warning ()
+  "Is a project stuck or waiting. If the project is not stuck,
+show nothing. However, if it is stuck and waiting on something,
+show this warning instead."
+  (if (howard/org-agenda-project-is-stuck)
+    (if (howard/org-agenda-project-is-waiting) " !W" " !S") ""))
+
+(defun howard/org-agenda-project-is-stuck ()
+  "Is a project stuck"
+  (if (howard/is-project-p) ; first, check that it's a project
+      (let* ((subtree-end (save-excursion (org-end-of-subtree t)))
+         (has-next))
+    (save-excursion
+      (forward-line 1)
+      (while (and (not has-next)
+              (< (point) subtree-end)
+              (re-search-forward "^\\*+ NEXT " subtree-end t))
+        (unless (member "WAITING" (org-get-tags-at))
+          (setq has-next t))))
+    (if has-next nil t)) ; signify that this project is stuck
+    nil)) ; if it's not a project, return an empty string
+
+(defun howard/org-agenda-project-is-waiting ()
+  "Is a project stuck"
+  (if (howard/is-project-p) ; first, check that it's a project
+      (let* ((subtree-end (save-excursion (org-end-of-subtree t))))
+    (save-excursion
+      (re-search-forward "^\\*+ WAITING" subtree-end t)))
+    nil)) ; if it's not a project, return an empty string
+;; Some helper functions for agenda views
+(defun howard/org-agenda-prefix-string ()
+  "Format"
+  (let ((path (org-format-outline-path (org-get-outline-path))) ; "breadcrumb" path
+    (stuck (howard/org-agenda-project-warning))) ; warning for stuck projects
+       (if (> (length path) 0)
+       (concat stuck ; add stuck warning
+           " [" path "]") ; add "breadcrumb"
+     stuck)))
+
 (defun howard/is-project-p ()
   "A task with a 'PROJ' keyword"
   (member (nth 2 (org-heading-components)) '("PROJ")))
@@ -719,10 +767,10 @@ Callers of this function already widen the buffer view."
 (defvar howard-org-agenda-display-settings
   '((org-agenda-start-with-log-mode t)
     (org-agenda-log-mode-items '(clock))
-    (org-agenda-prefix-format '((agenda . "  %-12:c%?-12t %(gs/org-agenda-add-location-string)% s")
+    (org-agenda-prefix-format '((agenda . "  %-12:c%?-12t %(howard/org-agenda-add-location-string)% s")
                                 (timeline . "  % s")
-                                (todo . "  %-12:c %(gs/org-agenda-prefix-string) ")
-                                (tags . "  %-12:c %(gs/org-agenda-prefix-string) ")
+                                (todo . "  %-12:c %(howard/org-agenda-prefix-string) ")
+                                (tags . "  %-12:c %(howard/org-agenda-prefix-string) ")
                                 (search . "  %i %-12:c"))))
   "Display settings for my agenda views.")
 
