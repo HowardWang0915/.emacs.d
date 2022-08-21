@@ -220,6 +220,11 @@
   :config
   (evil-collection-init))
 
+(use-package evil-surround
+  :after evil
+  :config
+  (global-evil-surround-mode 1))
+
 ; Undo tree
 (use-package undo-tree
   :ensure t
@@ -482,6 +487,21 @@
    ("M-e" . dirvish-emerge-menu)
    ("M-j" . dirvish-fd-jump)))
 
+(defun my-nov-font-setup ()
+  (face-remap-add-relative 'variable-pitch :family "Liberation Serif"
+                           :height 1.0))
+(use-package nov
+  :hook
+  (nov-mode . my-nov-font-setup)
+  (nov-mode . visual-line-mode)
+  (nov-mode . visual-fill-column-mode)
+  (nov-mode . shrface-mode)
+  :config
+  (setq nov-shr-rendering-functions '((img . nov-render-img) (title . nov-render-title)))
+  (setq nov-shr-rendering-functions (append nov-shr-rendering-functions shr-external-rendering-functions))
+  (setq nov-text-width t)
+  (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
+
 ; Magit Installation
 (use-package magit
   :custom
@@ -538,6 +558,9 @@
   (add-hook 'eww-after-render-hook #'shrface-mode)
   :config
   (require 'shrface))
+
+(use-package tldr
+  :disabled)
 
 (use-package go-translate
   :defer t
