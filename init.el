@@ -204,14 +204,15 @@
   (evil-set-initial-state 'messages-buffer-mode 'normal)
   (evil-set-initial-state 'dashboard-mode 'normal)
   :bind (:map evil-normal-state-map
-              ("L" . 'evil-next-buffer)
-              ("H" . 'evil-prev-buffer)
-              ("Q" . 'image-kill-buffer)
-              ("C-J" . 'evil-window-next)
-              ("C-K" . 'evil-window-prev)
+              ("C-S-L" . 'evil-next-buffer)
+              ("C-S-H" . 'evil-prev-buffer)
+              ("C-S-J" . 'evil-window-next)
+              ("C-S-K" . 'evil-window-prev)
           :map evil-insert-state-map
-              ("C-J" . 'evil-window-next)
-              ("C-K" . 'evil-window-prev)))
+              ("C-S-L" . 'evil-next-buffer)
+              ("C-S-H" . 'evil-prev-buffer)
+              ("C-S-J" . 'evil-window-next)
+              ("C-S-K" . 'evil-window-prev)))
 
 ; A modular evil experience
 (use-package evil-collection
@@ -734,7 +735,7 @@ Callers of this function already widen the buffer view."
   (setq org-adapt-indentation t)
   (setq org-indent-mode-turns-off-org-adapt-indentation nil)
   (setq org-agenda-window-setup 'only-window)
-  (setq org-src-window-setup 'only-window)
+  (setq org-src-window-setup 'current-window)
   (setq org-hide-emphasis-markers t)
   (setq org-confirm-babel-evaluate nil)
   (setq org-latex-pdf-process '("xelatex -interaction nonstopmode %f"
