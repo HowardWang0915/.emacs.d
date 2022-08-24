@@ -249,18 +249,10 @@
        "p" '(perspective-map :which-key "perspective"))
 ;; searching utilities
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-       "m" '(:ignore t :which-key "EMMS")
-       "m m" '(emms :which-key "EMMS Playlist")
-       "m l" '(emms-lyrics-toggle :which-key "EMMS Toggle lyrics")
-       "m ," '(emms-seek-backward :which-key "EMMS Seek Backward")
-       "m ." '(emms-seek-forward :which-key "EMMS Seek Forward")
-       "m z" '(emms-toggle-repeat-track :which-key "EMMS Repeat track")
-       "m Z" '(emms-toggle-repeat-playlist :which-key "EMMS Repeat playlist")
-       "m r" '(emms-toggle-random-playlist :which-key "EMMS Random playlist")
-       "m b" '(emms-browser :which-key "EMMS Browser"))
-;; neotree
+       "m" '(hydra-emms/body :which-key "EMMS"))
+
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
-       "e" '(treemacs :which-key "TreeMacs"))
+       "M" '(hydra-mpv/body :which-key "MPV"))
 
 ;; Elisp evaluation
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
@@ -327,6 +319,15 @@
        "t" '(:ignore t :which-key "terminal")
        "t v" '(vterm :which-key "Vterm")
        "t e" '(eshell :which-key "Eshell"))
+
+(use-package hydra)
+
+; Use which key
+(use-package which-key
+  :init (which-key-mode)
+  :diminish which-key-mode
+  :config
+  (setq which-key-idle-delay 1))
 
 ;; Install Ivy
 (use-package ivy
@@ -561,7 +562,11 @@
   (require 'shrface))
 
 (use-package tldr
-  :disabled)
+  :config
+  (defun howard/tldr ()
+    (interactive)
+    (tldr)
+    (quit-window)))
 
 (use-package go-translate
   :defer t
@@ -807,11 +812,11 @@ Callers of this function already widen the buffer view."
   (plist-put org-format-latex-options :scale 1.5)
   (org-babel-do-load-languages
    'org-babel-load-languages
-   '((python . t)
+   '((emacs-lisp . t)
+     (python . t)
      (shell . t)
      (latex . t)
-     (C . t)
-     (jupyter . t)))          ; must be last
+     (C . t)))
   (setq org-agenda-files
         (if howard/is-new-laptop
             '("/mnt/d/OrgFiles/OrgRoam/journal/Tasks.org")
@@ -980,49 +985,8 @@ Callers of this function already widen the buffer view."
   :custom
   (conda-anaconda-home "/opt/miniconda3"))
 
-;; Keyboard shortcuts
-(defun pad-string (str len)
-  "Return a string of length LEN starting with STR, truncating or padding as necessary."
-  (let* ((str-len (length str))
-         (extra-len (- len str-len)))
-    (if (>= extra-len 0)
-        (concat str (make-string extra-len ? ))
-      (concat (substring str 0 (- len 3)) "..."))))
-
-(defun my-emms-track-description-function (track)
-  "Detailed track listing for TRACK."
-  (let ((type (emms-track-get track 'type))
-        (name (emms-track-get track 'name))
-        (artist (emms-track-get track 'info-artist))
-        (album (emms-track-get track 'info-album))
-        (title (emms-track-get track 'info-title))
-        (tracknumber (emms-track-get track 'info-tracknumber))
-        (year (emms-track-get-year track))
-        (timet (emms-track-get track 'info-playing-time)))
-    (cond ((eq type 'file)
-           ;; If it has a minimum of metadata
-           (if (and artist title)
-               (concat
-                " "
-                (pad-string
-                 (if title
-                     (if tracknumber
-                         (concat "[" (format "%02d" (string-to-number tracknumber)) "] " title) title) "Unknown Title") 33)
-            "  "
-            (pad-string (if timet (format "%02d:%02d" (/ timet 60) (% timet 60)) "") 5)
-            "  "
-            (pad-string (or artist "Unknown Artist") 18)
-            "  "
-            (pad-string (if album
-                            (if year album) "Unknown Album") 25)
-            "  "
-            (pad-string (or year "") 4)) name))
-          ((eq 'url type)
-           (emms-format-url-track-name name))
-          ;; E.g. playlists
-          (t (concat (symbol-name type) ":" name)))))
-
 (use-package emms
+  :if window-system
   :commands emms
   :hook ((emms-playlist-mode . (lambda () (beacon-mode -1)))
          (emms-browser-mode . (lambda () (beacon-mode -1))))
@@ -1033,18 +997,82 @@ Callers of this function already widen the buffer view."
    ("<f12>" . emms-next))
   :config
   (require 'emms-setup)
-  (emms-standard)
-  (emms-default-players)
+  (emms-all)
   (emms-mode-line-disable)
+  (add-to-list 'emms-info-functions 'emms-info-mpd)
+  (add-to-list 'emms-player-list 'emms-player-mpd)
+  (add-hook 'emms-playlist-cleared-hook 'emms-player-mpd-clear)
+  (setq emms-player-mpd-server-name "localhost")
+  (setq emms-player-mpd-server-port "6600")
+  (setq emms-player-mpd-music-directory "~/Music")
   (setq emms-lyrics-display-on-modeline nil)
   (setq emms-lyrics-display-on-minibuffer t)
-  (setq emms-track-description-function 'my-emms-track-description-function)
   (setq emms-info-functions '(emms-info-exiftool))
   (setq emms-seek-seconds 5)
   (setq emms-browser-covers 'emms-browser-cache-thumbnail-async)
-  (setq emms-source-file-default-directory "~/Music/"))
+  (setq emms-source-file-default-directory "~/Music/")
+  (emms-player-mpd-connect)
+
+  (defhydra hydra-emms ()
+    "
+    ^Seek^                    ^Actions^                ^General^
+    ^^^^^^^^---------------------------------------------------------------------------
+    _h_: seek back            _z_: repeat track        _b_: Show EMMS browser
+    _l_: seek forward         _L_: Lyrics              _n_: next track
+    _s_: seek to seconds      _SPC_: pause             _p_: previous track
+                              _Z_ : repeat playlist    _m_: Show EMMS playlist
+                              _r_ : random track
+    ^
+    "
+    ("h" emms-seek-backward)
+    ("l" emms-seek-forward)
+    ("n" emms-next)
+    ("p" emms-previous)
+    ("L" emms-lyrics-toggle)
+    ("z" emms-toggle-repeat-track)
+    ("Z" emms-toggle-repeat-playlist)
+    ("r" emms-toggle-random-playlist)
+    ("b" emms-browser)
+    ("m" emms)
+    ("s" emms-seek-to)
+    ("SPC" emms-pause)))
 
 (use-package lyrics-fetcher
+  :if window-system
   :after (emms)
   :config
   (lyrics-fetcher-use-backend 'neteasecloud))
+
+(use-package mpv
+  :if window-system
+  :config
+  (defhydra hydra-mpv ()
+    "
+       ^Seek^                    ^Actions^                ^General^
+       ^^^^^^^^---------------------------------------------------------------------------
+       _h_: seek back -5         _g_: jump to entry       _i_: insert playback position
+       _j_: seek back -60        _q_: quit mpv            _n_: next track
+       _k_: seek forward 60      _SPC_: pause             _p_: previous track 
+       _l_: seek forward 5       _o_: osd                
+       _s_: seek to seconds      _M_: select dir
+       ^
+       "
+    ("M" mpv-play)
+    ("h" mpv-seek-backward "-5")
+    ("j" mpv-seek-backward "-60")
+    ("k" mpv-seek-forward "+60")
+    ("l" mpv-seek-forward "+5")
+    ("n" mpv-playlist-next)
+    ("p" mpv-playlist-prev)
+    ("s" mpv-seek)
+    ("g" mpv-jump-to-playlist-entry)
+    ("o" mpv-osd)
+    ("SPC" mpv-pause)
+    ("i" mpv-insert-playback-position)
+    ("q" mpv-kill))
+  ;; mpv show osd
+  (with-eval-after-load 'mpv
+    (defun mpv-osd ()
+      "Show the osd"
+      (interactive)
+      (mpv--enqueue '("set_property" "osd-level" "3") #'ignore))))
