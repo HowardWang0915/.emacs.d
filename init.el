@@ -958,15 +958,50 @@ Callers of this function already widen the buffer view."
 (use-package company-box
   :hook (company-mode . company-box-mode))
 
-(use-package tree-sitter)
-(use-package tree-sitter-langs)
-(global-tree-sitter-mode)
-(add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
+(use-package tree-sitter
+  :hook
+  (python-mode . tree-sitter-mode))
+(use-package tree-sitter-langs
+  :config
+  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
 
 (use-package vterm
   :config
   (setq shell-file-name "/bin/zsh"
           vterm-max-scrollback 5000))
+
+(use-package eshell
+  :after esh-mode
+  :config
+  (evil-define-key 'normal 'eshell-mode-map (kbd "C-r") 'howard/counsel-eshell-history)
+  (evil-define-key 'insert 'eshell-mode-map (kbd "C-r") 'howard/counsel-eshell-history)
+  (defun howard/counsel-eshell-history-action (cmd)
+    "Insert cmd into the buffer"
+    (interactive)
+    (insert cmd))
+
+  (defun howard/counsel-eshell-history (&optional initial-input)
+    "Find command from eshell history.
+INITIAL-INPUT can be given as the initial minibuffer input."
+    (interactive)
+    (ivy-read "Find cmd: " (howard/eshell-history-list)
+              :initial-input initial-input
+              :action #'howard/counsel-eshell-history-action
+              :caller 'howard/counsel-eshell-history))
+
+  (defun howard/eshell-history-list ()
+    "return the eshell history as a list"
+    (and (or (not (ring-p eshell-history-ring))
+             (ring-empty-p eshell-history-ring))
+         (error "No history"))
+    (let* ((index (1- (ring-length eshell-history-ring)))
+           (ref (- (ring-length eshell-history-ring) index))
+           (items (list)))
+      (while (>= index 0)
+        (setq items (cons (format "%s" (eshell-get-history index)) items)
+              index (1- index)
+              ref (1+ ref)))
+      items)))
 
 (use-package eshell-syntax-highlighting
   :after esh-mode
@@ -977,6 +1012,9 @@ Callers of this function already widen the buffer view."
           (lambda ()
             (make-local-variable 'scroll-margin)
             (setq scroll-margin 0)))
+
+(use-package esh-autosuggest
+  :hook (eshell-mode . esh-autosuggest-mode))
 ;; Add conda to eshell
 (use-package conda
   :config
