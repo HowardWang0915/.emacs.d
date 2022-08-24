@@ -55,20 +55,14 @@
   (set-face-attribute 'font-lock-comment-face nil
     :slant 'italic)
   (set-face-attribute 'font-lock-keyword-face nil
-    :slant 'italic)
-  ;; Set fonts for treemacs
-  (setq doom-themes-treemacs-enable-variable-pitch nil))
+    :slant 'italic))
 (add-hook 'after-init-hook 'howard/setup-fonts)
 (add-hook 'server-after-make-frame-hook 'howard/setup-fonts)
 
 ;; Install a better theme
-(use-package treemacs-all-the-icons
-  :after treemacs)
 (use-package doom-themes
   :init (load-theme 'doom-tokyo-night t)
   :config
-  (setq doom-themes-treemacs-theme "doom-colors")
-  (doom-themes-treemacs-config)
   (doom-themes-org-config))
 
 ; Install the icons
@@ -125,12 +119,6 @@
   ([remap describe-command] . helpful-command)
   ([remap describe-variable] . counsel-describe-variable)
   ([remap describe-key] . helpful-key))
-
-(use-package treemacs
-  :config
-  (setq treemacs-width 30))
-(use-package lsp-treemacs
-  :commands lsp-treemacs-errors-list)
 
 (use-package emojify
   :hook (after-init . global-emojify-mode))
@@ -320,8 +308,9 @@
 ;; LSP related
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
        "l" '(:ignore l :which-key "lsp")
-       "l j" '(flycheck-next-error :which-key "Next Diagnostic")
-       "l k" '(flycheck-previous-error :which-key "Previous Diagnostic"))
+       "l r" '(eglot-rename :which-key "Rename variable")
+       "l j" '(flymake-goto-next-error :which-key "Next Diagnostic")
+       "l k" '(flymake-goto-prev-error :which-key "Previous Diagnostic"))
 ;; git
 (nvmap :states '(normal visual) :keymaps 'override :prefix "SPC"
        "g" '(:ignore g :which-key "git")
@@ -907,23 +896,12 @@ Callers of this function already widen the buffer view."
   :defer t
   :hook (org-mode . org-auto-tangle-mode))
 
-(use-package lsp-mode
+(use-package eglot
   :hook
-  ((java-mode) . lsp-deferred)
-  ((python-mode) . lsp-deferred)
-  ((lua-mode) . lsp-deferred)
-  :commands (lsp lsp-deferred)
-  :init
-  (setq lsp-keymap-prefix "C-c l")
+  ((lua-mode) . eglot-ensure)
   :config
-  (evil-collection-define-key 'normal 'lsp-mode-map
-    "K" 'lsp-ui-doc-show)
-  (lsp-enable-which-key-integration t))
-
-(use-package lsp-ui
-  :after lsp-mode)
-; debugger-mode
-(use-package dap-mode :after lsp-mode :config (dap-auto-configure-mode))
+  (setq eldoc-echo-area-use-multiline-p nil) ; the echo area is so distracting
+  (add-to-list 'eglot-server-programs '(lua-mode . ("lua-language-server"))))
 
 (use-package flycheck)
 
@@ -932,22 +910,13 @@ Callers of this function already widen the buffer view."
   :config (yas-global-mode 1))
 
 ;; Add language servers here
-(use-package lsp-java
-  :config
-  (add-hook 'java-mode-hook 'lsp))
-
-(use-package lsp-pyright
-  :ensure t
-  :hook (python-mode . (lambda ()
-                        (require 'lsp-pyright)
-                        (lsp))))  ; or lsp-deferred
-; python
-(require 'dap-python)
-
 (use-package jupyter
   :defer t
   :after (org conda)
   :config
+  (org-babel-do-load-languages 'org-babel-load-languages
+                               (append org-babel-load-languages
+                                       '((jupyter . t))))
   (org-babel-jupyter-aliases-from-kernelspecs))
 
 ;; lua
@@ -967,7 +936,8 @@ Callers of this function already widen the buffer view."
 
 ;; completion framework
 (use-package company
-  :hook ((python-mode java-mode emacs-lisp-mode) . company-mode)
+  :hook
+  (prog-mode . company-mode)
   :config
     (setq company-delay 0.1)
     (setq company-minimum-prefix-length 1)
