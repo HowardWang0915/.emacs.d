@@ -966,6 +966,7 @@ Callers of this function already widen the buffer view."
   (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
 
 (use-package vterm
+  :if window-system
   :config
   (setq shell-file-name "/bin/zsh"
           vterm-max-scrollback 5000))

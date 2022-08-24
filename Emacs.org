@@ -1131,6 +1131,7 @@ Provides better Code highlighting
 ** vterm
 #+begin_src emacs-lisp
   (use-package vterm
+    :if window-system
     :config
     (setq shell-file-name "/bin/zsh"
             vterm-max-scrollback 5000))
