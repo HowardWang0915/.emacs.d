@@ -34,11 +34,13 @@ In this section, we want to identify the type of our system to do system-specifi
 #+begin_src emacs-lisp
   (setq inhibit-startup-message t)
 
-  (scroll-bar-mode -1)            ; Disable visible scrollbar
-  (tool-bar-mode -1)              ; Disable the toolbar
 
-  (tooltip-mode -1)               ; Disable tooltips
-  (menu-bar-mode -1)              ; Disable menu bar
+  (unless (string= window-system nil) t
+          (scroll-bar-mode -1)          ; Disable visible scrollbar
+          (tool-bar-mode -1)              ; Disable the toolbar
+          (tooltip-mode -1)               ; Disable tooltips
+          (menu-bar-mode -1))             ; Disable menu bar
+
   (setq split-width-threshold 75)  ; default vertical split
   (setq make-backup-files nil)    ; Don't do backups!
   (setq pop-up-windows nil)       ; Don't show popup windows
@@ -167,6 +169,7 @@ Turn on the line numbers. Also, disable line numbers for some modes
 Never loose your cursor again!
 #+begin_src emacs-lisp
   (use-package beacon
+    :if window-system
     :config
     (beacon-mode 1))
 #+end_src
@@ -205,9 +208,10 @@ Never loose your cursor again!
 #+end_src
 * Clipboard
 #+begin_src emacs-lisp
- (use-package clipetty
-  :ensure t
-  :hook (after-init . global-clipetty-mode)) 
+  (use-package clipetty
+    :if window-system
+    :ensure t
+    :hook (after-init . global-clipetty-mode)) 
 #+end_src
 * Language Settings 
 #+begin_src emacs-lisp
@@ -216,27 +220,6 @@ Never loose your cursor again!
    (set-buffer-file-coding-system 'utf-8-unix) 
 #+end_src
 * Key Bindings
-** General
-#+begin_src emacs-lisp
-  ; Install key-chords for some advanced configuration
-  (use-package key-chord)
-  ;; Make ESC quit prompts
-  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-  ;; Zoom in and out
-  (global-set-key (kbd "C-=") 'text-scale-increase)
-  (global-set-key (kbd "C--") 'text-scale-decrease)
-  ;; Unbind S-<Space> to avoid chinese collision
-  (global-unset-key (kbd "C-SPC"))
-#+end_src
-** Which key
-#+begin_src emacs-lisp
-  ; Use which key
-  (use-package which-key
-    :init (which-key-mode)
-    :diminish which-key-mode
-    :config
-    (setq which-key-idle-delay 1))
-#+end_src
 ** Evil Mode
 #+begin_src emacs-lisp
   ; Install evil mode
@@ -290,6 +273,18 @@ Never loose your cursor again!
     :config
     (evil-set-undo-system 'undo-tree)
     (global-undo-tree-mode 1))
+#+end_src
+** General
+#+begin_src emacs-lisp
+  ; Install key-chords for some advanced configuration
+  (use-package key-chord)
+  ;; Make ESC quit prompts
+  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+  ;; Zoom in and out
+  (global-set-key (kbd "C-=") 'text-scale-increase)
+  (global-set-key (kbd "C--") 'text-scale-decrease)
+  ;; Unbind S-<Space> to avoid chinese collision
+  (global-unset-key (kbd "C-SPC"))
 #+end_src
 ** General Package
     In this block, we define keymaps so they are consistent with Space Vim
@@ -577,6 +572,7 @@ A polished version of dired
        (face-remap-add-relative 'variable-pitch :family "Liberation Serif"
                                 :height 1.0))
      (use-package nov
+       :if window-system
        :hook
        (nov-mode . my-nov-font-setup)
        (nov-mode . visual-line-mode)
@@ -623,7 +619,9 @@ Leetcode practice in Emacs!
 ** Pdf-tool
 #+begin_src emacs-lisp
   (use-package pdf-tools
-    :hook (pdf-view-mode . hide-mode-line-mode)
+    :if window-system
+    :hook
+    (pdf-view-mode . hide-mode-line-mode)
     :after evil-collection
     :magic ("%PDF" . pdf-view-mode)
     :config
@@ -631,6 +629,7 @@ Leetcode practice in Emacs!
 
 
   (use-package org-pdftools
+    :if window-system
     :hook (org-mode . org-pdftools-setup-link))
 
 #+end_src
@@ -647,6 +646,7 @@ Leetcode practice in Emacs!
 A better html render system
 #+begin_src emacs-lisp
   (use-package shrface
+    :if window-system
     :defer t
     :config
     (shrface-basic)
@@ -999,6 +999,7 @@ This section contains the settings for org-mode
 A package that shows system notification from my agenda
 #+begin_src emacs-lisp
   (use-package org-alert
+    :if window-system
     :config
     (setq alert-default-style 'notifications
           org-alert-interval 900

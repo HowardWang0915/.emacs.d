@@ -18,11 +18,13 @@
 
 (setq inhibit-startup-message t)
 
-(scroll-bar-mode -1)            ; Disable visible scrollbar
-(tool-bar-mode -1)              ; Disable the toolbar
 
-(tooltip-mode -1)               ; Disable tooltips
-(menu-bar-mode -1)              ; Disable menu bar
+(unless (string= window-system nil) t
+        (scroll-bar-mode -1)          ; Disable visible scrollbar
+        (tool-bar-mode -1)              ; Disable the toolbar
+        (tooltip-mode -1)               ; Disable tooltips
+        (menu-bar-mode -1))             ; Disable menu bar
+
 (setq split-width-threshold 75)  ; default vertical split
 (setq make-backup-files nil)    ; Don't do backups!
 (setq pop-up-windows nil)       ; Don't show popup windows
@@ -37,6 +39,8 @@
 (setq maximum-scroll-margin 0.5)
 (setq scroll-step 1)
 (setq scroll-conservatively 101)
+; Mouse scrolling
+(setq mouse-wheel-progressive-speed nil)
 
 (defun howard/setup-fonts ()
   (set-face-attribute 'default nil
@@ -124,6 +128,7 @@
   :hook (after-init . global-emojify-mode))
 
 (use-package beacon
+  :if window-system
   :config
   (beacon-mode 1))
 
@@ -153,29 +158,13 @@
                      gcs-done)))
 
 (use-package clipetty
- :ensure t
- :hook (after-init . global-clipetty-mode))
+  :if window-system
+  :ensure t
+  :hook (after-init . global-clipetty-mode))
 
 (set-language-environment "UTF-8") 
 (set-default-coding-systems 'utf-8) 
 (set-buffer-file-coding-system 'utf-8-unix)
-
-; Install key-chords for some advanced configuration
-(use-package key-chord)
-;; Make ESC quit prompts
-(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-;; Zoom in and out
-(global-set-key (kbd "C-=") 'text-scale-increase)
-(global-set-key (kbd "C--") 'text-scale-decrease)
-;; Unbind S-<Space> to avoid chinese collision
-(global-unset-key (kbd "C-SPC"))
-
-; Use which key
-(use-package which-key
-  :init (which-key-mode)
-  :diminish which-key-mode
-  :config
-  (setq which-key-idle-delay 1))
 
 ; Install evil mode
 (use-package evil
@@ -228,6 +217,16 @@
   :config
   (evil-set-undo-system 'undo-tree)
   (global-undo-tree-mode 1))
+
+; Install key-chords for some advanced configuration
+(use-package key-chord)
+;; Make ESC quit prompts
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+;; Zoom in and out
+(global-set-key (kbd "C-=") 'text-scale-increase)
+(global-set-key (kbd "C--") 'text-scale-decrease)
+;; Unbind S-<Space> to avoid chinese collision
+(global-unset-key (kbd "C-SPC"))
 
 (use-package general
   :config
@@ -488,6 +487,7 @@
   (face-remap-add-relative 'variable-pitch :family "Liberation Serif"
                            :height 1.0))
 (use-package nov
+  :if window-system
   :hook
   (nov-mode . my-nov-font-setup)
   (nov-mode . visual-line-mode)
@@ -524,7 +524,9 @@
 (add-to-list 'exec-path "~/.local/bin")
 
 (use-package pdf-tools
-  :hook (pdf-view-mode . hide-mode-line-mode)
+  :if window-system
+  :hook
+  (pdf-view-mode . hide-mode-line-mode)
   :after evil-collection
   :magic ("%PDF" . pdf-view-mode)
   :config
@@ -532,6 +534,7 @@
 
 
 (use-package org-pdftools
+  :if window-system
   :hook (org-mode . org-pdftools-setup-link))
 
 ;; Project management
@@ -542,6 +545,7 @@
   :config (counsel-projectile-mode))
 
 (use-package shrface
+  :if window-system
   :defer t
   :config
   (shrface-basic)
@@ -868,6 +872,7 @@ Callers of this function already widen the buffer view."
     (org-roam-db-autosync-mode))
 
 (use-package org-alert
+  :if window-system
   :config
   (setq alert-default-style 'notifications
         org-alert-interval 900
