@@ -287,12 +287,16 @@
        "o r" '(:ignore t :which-key "Org-Roam")
        "o d" '(:ignore t :which-key "Org-Dailies")
        "o l" '(:ignore t :which-key "Org-Links")
+       "o t" '(:ignore t :which-key "Org-Timer")
        "o a" '(org-agenda :which-key "Org Agenda")
        "o s" '(org-schedule :which-key "Org Schedule")
        "o n" '(org-narrow-to-subtree :which-key "Org Narrow to Tree")
        "o w" '(widen :which-key "Widen")
        "o c" '(org-capture :which-key "Org Capture")
        "o e" '(org-export-dispatch :which-key "Org Export")
+       "o t s" '(org-timer-start :which-key "Org Timer Start")
+       "o t p" '(org-timer-pause-or-continue :which-key "Org Timer Pause or Continue")
+       "o t S" '(org-timer-stop :which-key "Org Timer Stop")
        "o l s" '(org-store-link :which-key "Org Store link")
        "o l i" '(org-insert-link :which-key "Org Insert link")
        "o l d" '(org-toggle-link-display :which-key "Org Link Display")
@@ -337,34 +341,35 @@
 
 ;; Install Ivy
 (use-package ivy
-:diminish
-:bind (("C-s" . swiper)
-        :map ivy-minibuffer-map
-        ("TAB" . ivy-alt-done)	
-        ;; ("C-l" . ivy-alt-done)
-        ("C-j" . ivy-next-line)
-        ("C-k" . ivy-previous-line)
-        :map ivy-switch-buffer-map
-        ("C-k" . ivy-previous-line)
-        ("C-l" . ivy-done)
-        ("C-d" . ivy-switch-buffer-kill)
-        :map ivy-reverse-i-search-map
-        ("C-k" . ivy-previous-line)
-        ("C-d" . ivy-reverse-i-search-kill))
-:config
-(ivy-mode 1))
-
-; remove ^
-(setq ivy-initial-inputs-alist nil)
+  :diminish
+  :bind (("C-s" . swiper)
+         :map evil-window-map
+         ("," . ivy-push-view)
+         ("." . ivy-switch-view)
+         :map ivy-minibuffer-map
+         ("TAB" . ivy-alt-done)	
+         ("C-j" . ivy-next-line)
+         ("C-k" . ivy-previous-line)
+         :map ivy-switch-buffer-map
+         ("C-k" . ivy-previous-line)
+         ("C-l" . ivy-done)
+         ("C-d" . ivy-switch-buffer-kill)
+         :map ivy-reverse-i-search-map
+         ("C-k" . ivy-previous-line)
+         ("C-d" . ivy-reverse-i-search-kill))
+  :config
+  (setq ivy-initial-inputs-alist nil) ; remove ^
+  (ivy-mode 1))
 
 ; Show last used commands first
-(use-package smex)
-(smex-initialize)
+(use-package smex
+  :config
+  (smex-initialize))
 
 (use-package ivy-rich
-:after ivy
-:init
-(ivy-rich-mode 1))
+  :after ivy
+  :init
+  (ivy-rich-mode 1))
 
 ; A floating window like expierence
 (use-package ivy-posframe
@@ -534,6 +539,7 @@
   :if window-system
   :hook
   (pdf-view-mode . hide-mode-line-mode)
+  (pdf-view-mode . (lambda () (blink-cursor-suspend)))
   :after evil-collection
   :magic ("%PDF" . pdf-view-mode)
   :config
