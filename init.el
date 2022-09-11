@@ -65,7 +65,7 @@
 
 ;; Install a better theme
 (use-package doom-themes
-  :init (load-theme 'doom-tokyo-night t)
+  :init (load-theme 'doom-tomorrow-night t)
   :config
   (doom-themes-org-config))
 
@@ -140,6 +140,9 @@
   :init
   (persp-mode))
 
+; Use winner mode to redo window settings
+(winner-mode 1)
+
 ;; Using garbage magic hack.
  (use-package gcmh
    :config
@@ -190,11 +193,14 @@
               ("C-S-H" . 'evil-prev-buffer)
               ("C-S-J" . 'evil-window-next)
               ("C-S-K" . 'evil-window-prev)
-          :map evil-insert-state-map
+              :map evil-insert-state-map
               ("C-S-L" . 'evil-next-buffer)
               ("C-S-H" . 'evil-prev-buffer)
               ("C-S-J" . 'evil-window-next)
-              ("C-S-K" . 'evil-window-prev)))
+              ("C-S-K" . 'evil-window-prev)
+              :map evil-window-map
+              ("u" . 'winner-undo)
+              ("C-r" . 'winner-redo)))
 
 ; A modular evil experience
 (use-package evil-collection
@@ -793,6 +799,8 @@ Callers of this function already widen the buffer view."
   (org-mode . howard/org-mode-setup)
   (org-mode . flyspell-mode)
   :config
+  (evil-define-key 'normal 'org-mode-map (kbd "C-r") 'evil-redo)
+  (evil-define-key 'insert 'org-mode-map (kbd "C-r") 'evil-redo)
   (require 'org-tempo)
   (setq org-ellipsis " ▾")
   (howard/org-font-setup)
@@ -1004,6 +1012,7 @@ INITIAL-INPUT can be given as the initial minibuffer input."
               ref (1+ ref)))
       items)))
 
+(use-package eshell-toggle)
 (use-package eshell-syntax-highlighting
   :after esh-mode
   :config
@@ -1051,7 +1060,6 @@ INITIAL-INPUT can be given as the initial minibuffer input."
   (setq emms-browser-covers 'emms-browser-cache-thumbnail-async)
   (setq emms-source-file-default-directory "~/Music/")
   (emms-player-mpd-connect)
-
   (defhydra hydra-emms ()
     "
     ^Seek^                    ^Actions^                ^General^

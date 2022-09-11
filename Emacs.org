@@ -90,7 +90,7 @@ Below we setup custom functions to setup the fonts.
 #+begin_src emacs-lisp
   ;; Install a better theme
   (use-package doom-themes
-    :init (load-theme 'doom-tokyo-night t)
+    :init (load-theme 'doom-tomorrow-night t)
     :config
     (doom-themes-org-config))
 
@@ -186,6 +186,11 @@ Never loose your cursor again!
        :init
        (persp-mode))
    #+end_src
+** Window Management
+   #+begin_src emacs-lisp
+     ; Use winner mode to redo window settings
+     (winner-mode 1)
+   #+end_src
 
 * Optimization
 
@@ -248,11 +253,14 @@ Never loose your cursor again!
                 ("C-S-H" . 'evil-prev-buffer)
                 ("C-S-J" . 'evil-window-next)
                 ("C-S-K" . 'evil-window-prev)
-            :map evil-insert-state-map
+                :map evil-insert-state-map
                 ("C-S-L" . 'evil-next-buffer)
                 ("C-S-H" . 'evil-prev-buffer)
                 ("C-S-J" . 'evil-window-next)
-                ("C-S-K" . 'evil-window-prev)))
+                ("C-S-K" . 'evil-window-prev)
+                :map evil-window-map
+                ("u" . 'winner-undo)
+                ("C-r" . 'winner-redo)))
 
   ; A modular evil experience
   (use-package evil-collection
@@ -922,6 +930,8 @@ This section contains the settings for org-mode
     (org-mode . howard/org-mode-setup)
     (org-mode . flyspell-mode)
     :config
+    (evil-define-key 'normal 'org-mode-map (kbd "C-r") 'evil-redo)
+    (evil-define-key 'insert 'org-mode-map (kbd "C-r") 'evil-redo)
     (require 'org-tempo)
     (setq org-ellipsis " ▾")
     (howard/org-font-setup)
@@ -1171,6 +1181,7 @@ Provides better Code highlighting
                 ref (1+ ref)))
         items)))
 
+  (use-package eshell-toggle)
   (use-package eshell-syntax-highlighting
     :after esh-mode
     :config
@@ -1221,7 +1232,6 @@ Provides better Code highlighting
     (setq emms-browser-covers 'emms-browser-cache-thumbnail-async)
     (setq emms-source-file-default-directory "~/Music/")
     (emms-player-mpd-connect)
-
     (defhydra hydra-emms ()
       "
       ^Seek^                    ^Actions^                ^General^
